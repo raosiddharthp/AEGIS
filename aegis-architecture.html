@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Architecture — AEGIS</title>
+<meta name="description" content="AEGIS system architecture: four-layer agentic design, C4 diagrams, ADRs, and regulatory mapping for AI governance enforcement in financial services."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+/* ── DESIGN TOKENS (identical to index.html) ──────────────────── */
+:root {
+  --void:#080c14; --deep:#0d1421; --surface:#111827;
+  --surface-2:#1a2235; --surface-3:#222d42;
+  --border:rgba(255,255,255,0.07); --border-2:rgba(255,255,255,0.12);
+  --teal:#00d4c8; --teal-dim:rgba(0,212,200,0.10); --teal-glow:rgba(0,212,200,0.22);
+  --amber:#f59e0b; --amber-dim:rgba(245,158,11,0.10);
+  --red:#ef4444; --red-dim:rgba(239,68,68,0.10);
+  --green:#10b981; --green-dim:rgba(16,185,129,0.10);
+  --violet:#a78bfa; --violet-dim:rgba(167,139,250,0.10);
+  --ink:#f1f5f9; --ink-mid:#94a3b8; --ink-dim:#475569; --ink-faint:rgba(241,245,249,0.06);
+  --mono:'DM Mono',monospace; --sans:'Syne',sans-serif; --serif:'Instrument Serif',serif;
+  --max:1320px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--void);color:var(--ink);font-family:var(--mono);font-weight:300;overflow-x:hidden;line-height:1.6;}
+body::before{content:'';position:fixed;inset:0;z-index:1000;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:0.5;}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,200,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,200,0.015) 1px,transparent 1px);background-size:80px 80px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:rgba(8,12,20,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:0.12em;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:10px;}
+.nav-logo-mark{width:28px;height:28px;border:1px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;letter-spacing:0.05em;color:var(--teal);font-family:var(--mono);}
+.nav-links{display:flex;gap:0;list-style:none;border-left:1px solid var(--border);}
+.nav-links li{border-right:1px solid var(--border);}
+.nav-links a{display:block;padding:0 22px;height:60px;line-height:60px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mid);text-decoration:none;transition:all 0.2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--teal);background:var(--teal-dim);}
+.nav-github{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--void);background:var(--teal);padding:8px 20px;text-decoration:none;transition:all 0.2s;}
+.nav-github:hover{background:#00f0e2;}
+
+/* HERO */
+.hero{padding:120px 48px 72px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 50% 60% at 80% 30%,rgba(0,212,200,0.05) 0%,transparent 70%);}
+.hero-watermark{position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-family:var(--sans);font-size:clamp(120px,16vw,220px);font-weight:800;letter-spacing:-0.04em;color:transparent;-webkit-text-stroke:1px rgba(0,212,200,0.06);pointer-events:none;user-select:none;line-height:1;z-index:0;}
+.hero-inner{position:relative;z-index:1;max-width:var(--max);}
+.breadcrumb{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:28px;}
+.breadcrumb a{color:var(--teal);text-decoration:none;}
+.breadcrumb a:hover{text-decoration:underline;}
+.breadcrumb-sep{color:var(--ink-dim);}
+h1{font-family:var(--sans);font-size:clamp(40px,5.5vw,80px);font-weight:800;line-height:0.95;letter-spacing:-0.03em;color:var(--ink);margin-bottom:8px;}
+h1 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--teal);}
+.hero-sub{font-family:var(--mono);font-size:14px;font-weight:300;line-height:1.8;color:var(--ink-mid);max-width:640px;margin-top:28px;}
+
+/* TOC */
+.toc{background:var(--surface);border:1px solid var(--border);padding:32px 40px;margin:48px 0 0;}
+.toc-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);margin-bottom:20px;}
+.toc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+.toc-item{padding:14px 20px;border-right:1px solid var(--border);border-top:1px solid var(--border);}
+.toc-item:nth-child(-n+4){border-top:none;}
+.toc-item:nth-child(4n){border-right:none;}
+.toc-n{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;color:var(--ink-dim);margin-bottom:4px;}
+.toc-link{font-family:var(--mono);font-size:11px;font-weight:400;color:var(--ink-mid);text-decoration:none;transition:color 0.2s;line-height:1.4;display:block;}
+.toc-link:hover{color:var(--teal);}
+
+/* SECTION */
+.section{padding:96px 48px;border-bottom:1px solid var(--border);position:relative;}
+.section-inner{max-width:var(--max);margin:0 auto;}
+.section-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.section-label::before{content:'';width:24px;height:1px;background:var(--teal);}
+.section-title{font-family:var(--sans);font-size:clamp(24px,3vw,44px);font-weight:800;letter-spacing:-0.03em;line-height:1.05;color:var(--ink);margin-bottom:16px;}
+.section-title em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--teal);}
+.section-lead{font-family:var(--mono);font-size:13px;font-weight:300;line-height:1.85;color:var(--ink-mid);max-width:680px;margin-bottom:56px;}
+
+/* ── FOUR-LAYER DIAGRAM ─────────────────────────────────────────── */
+.four-layer{display:flex;flex-direction:column;gap:3px;margin-bottom:56px;}
+.layer-row{display:grid;grid-template-columns:180px 1fr;gap:0;border:1px solid var(--border);min-height:120px;position:relative;transition:border-color 0.3s;}
+.layer-row:hover{border-color:var(--border-2);}
+.layer-num-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;border-right:1px solid var(--border);background:var(--surface);gap:10px;}
+.layer-num{font-family:var(--sans);font-size:32px;font-weight:800;letter-spacing:-0.04em;line-height:1;}
+.layer-tag{font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;text-align:center;line-height:1.4;}
+.layer-body{padding:24px 32px;display:flex;flex-direction:column;justify-content:center;gap:8px;}
+.layer-title{font-family:var(--sans);font-size:16px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);}
+.layer-desc{font-family:var(--mono);font-size:11px;font-weight:300;line-height:1.7;color:var(--ink-mid);max-width:700px;}
+.layer-components{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.layer-chip{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.08em;padding:4px 10px;border:1px solid var(--border);color:var(--ink-dim);white-space:nowrap;}
+.layer-chip.teal{border-color:rgba(0,212,200,0.3);color:var(--teal);}
+.layer-chip.amber{border-color:rgba(245,158,11,0.3);color:var(--amber);}
+.layer-chip.green{border-color:rgba(16,185,129,0.3);color:var(--green);}
+.layer-chip.violet{border-color:rgba(167,139,250,0.3);color:var(--violet);}
+
+.l1{--lc:var(--teal);}
+.l2{--lc:var(--amber);}
+.l3{--lc:var(--violet);}
+.l4{--lc:var(--green);}
+.layer-row .layer-num-col .layer-num{color:var(--lc);}
+.layer-row .layer-num-col .layer-tag{color:var(--lc);opacity:0.7;}
+.layer-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--lc);}
+
+/* ── C4 DIAGRAMS (SVG-based, inline) ───────────────────────────── */
+.c4-wrap{margin-bottom:56px;}
+.c4-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:16px;display:flex;align-items:center;gap:12px;}
+.c4-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.c4-frame{background:var(--surface);border:1px solid var(--border);padding:40px;overflow-x:auto;}
+.c4-frame svg{display:block;margin:0 auto;}
+
+/* ── AGENT CARDS ────────────────────────────────────────────────── */
+.agents-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-bottom:56px;}
+.agent-card{background:var(--surface);border:1px solid var(--border);padding:28px 24px;position:relative;overflow:hidden;transition:border-color 0.3s;}
+.agent-card:hover{border-color:var(--border-2);}
+.agent-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;transition:opacity 0.3s;}
+.agent-card:hover::before{opacity:1;}
+.agent-card.teal::before{background:var(--teal);opacity:0;}
+.agent-card.amber::before{background:var(--amber);opacity:0;}
+.agent-card.violet::before{background:var(--violet);opacity:0;}
+.agent-card.green::before{background:var(--green);opacity:0;}
+.agent-card.red-c::before{background:var(--red);opacity:0;}
+.agent-n{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:16px;}
+.agent-icon{font-size:22px;margin-bottom:12px;display:block;}
+.agent-name{font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);margin-bottom:8px;}
+.agent-role{font-family:var(--mono);font-size:10px;font-weight:300;line-height:1.65;color:var(--ink-mid);}
+.agent-policy{margin-top:14px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:0.05em;padding:6px 10px;border-left:2px solid;line-height:1.5;}
+.agent-card.teal .agent-policy{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+.agent-card.amber .agent-policy{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);}
+.agent-card.violet .agent-policy{border-color:var(--violet);color:var(--violet);background:var(--violet-dim);}
+.agent-card.green .agent-policy{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.agent-card.red-c .agent-policy{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+
+/* ── ADR CARDS ──────────────────────────────────────────────────── */
+.adr-list{display:flex;flex-direction:column;gap:2px;margin-bottom:56px;}
+.adr-card{background:var(--surface);border:1px solid var(--border);overflow:hidden;}
+.adr-header{display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:0;cursor:pointer;transition:background 0.2s;}
+.adr-header:hover{background:var(--surface-2);}
+.adr-id{padding:20px 24px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.1em;color:var(--teal);border-right:1px solid var(--border);text-align:center;}
+.adr-title-wrap{padding:20px 28px;}
+.adr-title{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);margin-bottom:3px;}
+.adr-subtitle{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-dim);}
+.adr-status{padding:20px 24px;border-left:1px solid var(--border);}
+.adr-badge{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:4px 10px;border:1px solid;}
+.adr-badge.accepted{border-color:rgba(16,185,129,0.4);color:var(--green);}
+.adr-toggle{padding:20px 24px;font-family:var(--mono);font-size:14px;color:var(--ink-dim);border-left:1px solid var(--border);transition:color 0.2s;}
+.adr-body{padding:0 28px;max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),padding 0.3s;}
+.adr-body.open{max-height:800px;padding:28px;}
+.adr-section{margin-bottom:20px;}
+.adr-section:last-child{margin-bottom:0;}
+.adr-section-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:10px;}
+.adr-section-body{font-family:var(--mono);font-size:12px;font-weight:300;line-height:1.8;color:var(--ink-mid);}
+.adr-section-body strong{color:var(--ink);font-weight:400;}
+.adr-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.adr-option{padding:14px 16px;border:1px solid var(--border);background:var(--surface-2);}
+.adr-option.chosen{border-color:rgba(0,212,200,0.3);background:var(--teal-dim);}
+.adr-option-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px;}
+.adr-option.chosen .adr-option-label{color:var(--teal);}
+.adr-option-text{font-family:var(--mono);font-size:11px;font-weight:300;color:var(--ink-mid);line-height:1.6;}
+
+/* ── TECH STACK TABLE ───────────────────────────────────────────── */
+.stack-table{width:100%;border-collapse:collapse;border:1px solid var(--border);margin-bottom:56px;}
+.stack-table th{background:var(--surface);padding:14px 20px;font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-dim);text-align:left;border-bottom:1px solid var(--border);border-right:1px solid var(--border);}
+.stack-table th:last-child{border-right:none;}
+.stack-table td{padding:16px 20px;font-family:var(--mono);font-size:11px;font-weight:300;color:var(--ink-mid);border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:top;line-height:1.6;}
+.stack-table td:last-child{border-right:none;}
+.stack-table tr:last-child td{border-bottom:none;}
+.stack-table tr:hover td{background:var(--surface-2);}
+.stack-name{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);display:block;margin-bottom:3px;}
+.cost-free{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--green);letter-spacing:0.08em;}
+.cost-user{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--amber);letter-spacing:0.08em;}
+
+/* ── REG MAPPING ────────────────────────────────────────────────── */
+.reg-map{border:1px solid var(--border);overflow:hidden;margin-bottom:56px;}
+.reg-map-header{display:grid;grid-template-columns:200px repeat(3,1fr);background:var(--surface);border-bottom:1px solid var(--border);}
+.reg-map-cell{padding:14px 20px;font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-dim);border-right:1px solid var(--border);}
+.reg-map-cell:first-child{color:var(--teal);}
+.reg-map-cell:last-child{border-right:none;}
+.reg-map-row{display:grid;grid-template-columns:200px repeat(3,1fr);border-bottom:1px solid var(--border);}
+.reg-map-row:last-child{border-bottom:none;}
+.reg-map-row:hover .reg-map-td{background:var(--surface-2);}
+.reg-map-td{padding:18px 20px;font-family:var(--mono);font-size:11px;font-weight:300;color:var(--ink-mid);border-right:1px solid var(--border);line-height:1.6;}
+.reg-map-td:last-child{border-right:none;}
+.reg-map-td strong{color:var(--ink);font-weight:400;display:block;margin-bottom:3px;font-size:12px;}
+.check{color:var(--teal);font-size:12px;}
+.partial{color:var(--amber);font-size:12px;}
+
+/* PAGE NAV */
+.page-nav{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border);}
+.page-nav-item{padding:48px;text-decoration:none;color:var(--ink);transition:background 0.2s;display:flex;flex-direction:column;gap:8px;}
+.page-nav-item:hover{background:var(--surface);}
+.page-nav-item+.page-nav-item{border-left:1px solid var(--border);}
+.pn-dir{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-dim);}
+.pn-title{font-family:var(--serif);font-size:24px;font-style:italic;color:var(--teal);}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:32px 48px;display:flex;justify-content:space-between;align-items:center;background:var(--void);}
+.footer-brand{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0.08em;color:var(--ink);}
+.footer-brand span{color:var(--teal);}
+.footer-meta{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-dim);text-align:right;line-height:1.8;}
+
+/* FADE */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;}
+.fu1{animation-delay:0.1s;}.fu2{animation-delay:0.25s;}.fu3{animation-delay:0.4s;}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.agents-grid{grid-template-columns:repeat(2,1fr);}.toc-grid{grid-template-columns:repeat(2,1fr);}.adr-options{grid-template-columns:1fr 1fr;}.reg-map-header,.reg-map-row{grid-template-columns:160px repeat(3,1fr);}}
+@media(max-width:768px){nav{padding:0 24px;}.nav-links{display:none;}.hero{padding:100px 24px 56px;}.section{padding:64px 24px;}.agents-grid{grid-template-columns:1fr;}.toc-grid{grid-template-columns:1fr;}.toc-item{border-right:none;}.adr-options{grid-template-columns:1fr;}.four-layer .layer-row{grid-template-columns:1fr;}.layer-num-col{flex-direction:row;border-right:none;border-bottom:1px solid var(--border);}.stack-table{display:block;overflow-x:auto;}.reg-map{overflow-x:auto;}.reg-map-header,.reg-map-row{min-width:700px;}.page-nav{grid-template-columns:1fr;}.page-nav-item+.page-nav-item{border-left:none;border-top:1px solid var(--border);}footer{flex-direction:column;gap:12px;text-align:center;padding:24px;}.footer-meta{text-align:center;}.hero-watermark{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-mark">AE</div>
+    AEGIS
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="architecture.html" class="active">Architecture</a></li>
+    <li><a href="simulation.html">Simulation</a></li>
+    <li><a href="dashboard.html">Dashboard</a></li>
+  </ul>
+  <a href="https://github.com/" class="nav-github" target="_blank">GitHub →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-watermark">ARCH</div>
+  <div class="hero-inner">
+    <div class="breadcrumb fade-up">
+      <a href="index.html">AEGIS</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Architecture</span>
+    </div>
+    <h1 class="fade-up fu1">Four layers.<br>Five agents.<br><em>One audit trail.</em></h1>
+    <p class="hero-sub fade-up fu2">A full enterprise architecture for AI governance enforcement — designed to the C4 model, documented with Architecture Decision Records, and mapped to EU AI Act, SR 11-7, NIST AI RMF, and IAPP AIGP v2.1 requirements. Every layer is deployable. Every decision is justified.</p>
+
+    <!-- TOC -->
+    <div class="toc fade-up fu3">
+      <div class="toc-label">Contents</div>
+      <div class="toc-grid">
+        <div class="toc-item">
+          <div class="toc-n">01</div>
+          <a href="#four-layer" class="toc-link">Four-Layer Architecture Overview</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">02</div>
+          <a href="#c4-context" class="toc-link">C4 Level 1 — System Context</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">03</div>
+          <a href="#c4-container" class="toc-link">C4 Level 2 — Container Diagram</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">04</div>
+          <a href="#c4-component" class="toc-link">C4 Level 3 — Component Diagram</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">05</div>
+          <a href="#agents" class="toc-link">Agent Orchestration Design</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">06</div>
+          <a href="#adrs" class="toc-link">Architecture Decision Records</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">07</div>
+          <a href="#stack" class="toc-link">Technology Stack</a>
+        </div>
+        <div class="toc-item">
+          <div class="toc-n">08</div>
+          <a href="#reg-mapping" class="toc-link">Regulatory Mapping</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 01: FOUR-LAYER OVERVIEW -->
+<section class="section" id="four-layer">
+  <div class="section-inner">
+    <div class="section-label">01 — System Architecture</div>
+    <h2 class="section-title">The four-layer<br><em>agentic stack.</em></h2>
+    <p class="section-lead">AEGIS is designed as a genuinely agentic, generative AI system — not a workflow tool with AI bolted on. Each layer has a distinct responsibility, a defined interface, and a regulatory justification. The stack is deployable end-to-end on Google Cloud Platform's always-free tier with zero marginal cost at portfolio traffic volumes.</p>
+
+    <div class="four-layer">
+      <!-- L1 -->
+      <div class="layer-row l1">
+        <div class="layer-num-col">
+          <div class="layer-num">L1</div>
+          <div class="layer-tag">Presentation &amp;<br>Experience</div>
+        </div>
+        <div class="layer-body">
+          <div class="layer-title">User Interface — Static Site + Functional App</div>
+          <div class="layer-desc">The human-facing surface. Two deployments from one repository: the design documentation site (GitHub Pages, static HTML/CSS/JS) and the functional governance app (served from Cloud Run, same frontend codebase). The Documentation Lead interacts exclusively at this layer — submitting intakes, viewing classifications, tracking approvals, and generating audit packages. No technical knowledge required. No backend infrastructure visible to the user.</div>
+          <div class="layer-components">
+            <div class="layer-chip teal">HTML5 / CSS3 / Vanilla JS</div>
+            <div class="layer-chip teal">GitHub Pages — design docs</div>
+            <div class="layer-chip teal">Cloud Run — functional app</div>
+            <div class="layer-chip">Syne + DM Mono typography</div>
+            <div class="layer-chip">Zero framework dependency</div>
+            <div class="layer-chip">Mobile responsive</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- L2 -->
+      <div class="layer-row l2">
+        <div class="layer-num-col">
+          <div class="layer-num">L2</div>
+          <div class="layer-tag">Agent<br>Orchestration</div>
+        </div>
+        <div class="layer-body">
+          <div class="layer-title">Python FastAPI — Orchestrator + Five Specialist Agents</div>
+          <div class="layer-desc">The intelligence layer. A master Orchestrator Agent receives every intake submission and delegates to five specialist agents: Intake, Classification, Oversight, Audit, and Explainability. Each agent is a structured Python function with a defined prompt template, a policy context injection, and a typed response schema. Agents operate sequentially in the happy path and branch on exceptions. Every agent call produces a plain-language explanation of its decision before returning its result — explainability is not a post-processing step, it is the first output of every agent.</div>
+          <div class="layer-components">
+            <div class="layer-chip amber">Python 3.12</div>
+            <div class="layer-chip amber">FastAPI</div>
+            <div class="layer-chip amber">Orchestrator Agent</div>
+            <div class="layer-chip amber">5 Specialist Agents</div>
+            <div class="layer-chip amber">Pydantic — typed schemas</div>
+            <div class="layer-chip">Rate limiting middleware</div>
+            <div class="layer-chip">CORS policy</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- L3 -->
+      <div class="layer-row l3">
+        <div class="layer-num-col">
+          <div class="layer-num">L3</div>
+          <div class="layer-tag">MLOps &amp;<br>Intelligence</div>
+        </div>
+        <div class="layer-body">
+          <div class="layer-title">Gemini API + Policy-as-Context + Prompt Registry</div>
+          <div class="layer-desc">The model layer. Google Gemini 2.0 Flash (via Google AI Studio free tier) provides the generative intelligence for all agent reasoning. The three governance policies — AI Content Working Standard, Human Oversight Documentation Standard, and Model Documentation Minimum Standards — are injected as system context into every agent prompt. This is policy-as-context: the policies are not hardcoded logic, they are the reasoning substrate. A dedicated prompt registry in the repository tracks prompt versions, so changes to prompts are auditable — the same standard AEGIS enforces on AI documentation is applied to itself.</div>
+          <div class="layer-components">
+            <div class="layer-chip violet">Gemini 2.0 Flash API</div>
+            <div class="layer-chip violet">Google AI Studio — free tier</div>
+            <div class="layer-chip violet">Policy-as-Context pattern</div>
+            <div class="layer-chip violet">Prompt Registry (repo)</div>
+            <div class="layer-chip">EU AI Act Annex III logic</div>
+            <div class="layer-chip">Structured JSON outputs</div>
+            <div class="layer-chip">Temperature: 0.1 (deterministic)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- L4 -->
+      <div class="layer-row l4">
+        <div class="layer-num-col">
+          <div class="layer-num">L4</div>
+          <div class="layer-tag">Infrastructure</div>
+        </div>
+        <div class="layer-body">
+          <div class="layer-title">Google Cloud Platform — Always-Free Tier</div>
+          <div class="layer-desc">The infrastructure layer. Cloud Run hosts the FastAPI backend — serverless, scales to zero when idle, 2M requests/month free. Firestore persists the audit log, model registry, and approval records — 50K reads and 20K writes per day free. Cloud Storage holds the three policy documents as authoritative source artifacts — 5GB always free. The $300 GCP trial credit acts as a long-term safety net but is not expected to be consumed at portfolio traffic volumes. Total ongoing infrastructure cost at current scale: £0.</div>
+          <div class="layer-components">
+            <div class="layer-chip green">Cloud Run — serverless API host</div>
+            <div class="layer-chip green">Firestore — audit log + registry</div>
+            <div class="layer-chip green">Cloud Storage — policy documents</div>
+            <div class="layer-chip green">GitHub Pages — static docs</div>
+            <div class="layer-chip">$300 GCP credit — safety net</div>
+            <div class="layer-chip">Always-free tier — £0 ongoing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 02: C4 LEVEL 1 — SYSTEM CONTEXT -->
+<section class="section" id="c4-context" style="background:var(--deep);">
+  <div class="section-inner">
+    <div class="section-label">02 — C4 Model · Level 1</div>
+    <h2 class="section-title">System Context<br><em>diagram.</em></h2>
+    <p class="section-lead">Who uses AEGIS, what external systems it depends on, and how it sits within the broader regulatory and organisational landscape. The C4 model (Simon Brown, 2018) is the standard for communicating software architecture at multiple levels of abstraction.</p>
+
+    <div class="c4-wrap">
+      <div class="c4-label">C4 Level 1 — System Context · AEGIS within Meridian Capital Group</div>
+      <div class="c4-frame">
+        <svg viewBox="0 0 900 560" width="900" height="560" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,212,200,0.6)"/>
+            </marker>
+            <marker id="arr-dim" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(148,163,184,0.4)"/>
+            </marker>
+          </defs>
+
+          <!-- Background -->
+          <rect width="900" height="560" fill="#080c14"/>
+
+          <!-- Enterprise boundary -->
+          <rect x="20" y="20" width="860" height="520" rx="2" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="36" y="42" font-size="9" fill="rgba(255,255,255,0.2)" font-weight="500" letter-spacing="2">MERIDIAN CAPITAL GROUP · ENTERPRISE BOUNDARY</text>
+
+          <!-- AEGIS System (centre) -->
+          <rect x="330" y="200" width="240" height="120" rx="2" fill="#111827" stroke="#00d4c8" stroke-width="1.5"/>
+          <rect x="330" y="200" width="240" height="4" rx="0" fill="#00d4c8"/>
+          <text x="450" y="252" text-anchor="middle" font-size="14" fill="#f1f5f9" font-weight="700" font-family="'Syne', sans-serif" letter-spacing="-0.5">AEGIS</text>
+          <text x="450" y="270" text-anchor="middle" font-size="9" fill="#00d4c8" letter-spacing="1">[ Software System ]</text>
+          <text x="450" y="290" text-anchor="middle" font-size="9" fill="#94a3b8">AI governance enforcement,</text>
+          <text x="450" y="304" text-anchor="middle" font-size="9" fill="#94a3b8">EU AI Act classification,</text>
+          <text x="450" y="318" text-anchor="middle" font-size="9" fill="#94a3b8">audit trail generation</text>
+
+          <!-- Documentation Lead (left) -->
+          <circle cx="100" cy="260" r="28" fill="#1a2235" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="100" y="256" text-anchor="middle" font-size="18" fill="#00d4c8">👤</text>
+          <text x="100" y="310" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="500">Documentation</text>
+          <text x="100" y="323" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="500">Lead</text>
+          <text x="100" y="338" text-anchor="middle" font-size="9" fill="#94a3b8">[ Person ]</text>
+          <text x="100" y="351" text-anchor="middle" font-size="9" fill="#475569">Sofía Vargas</text>
+
+          <!-- Compliance Officer (bottom-left) -->
+          <circle cx="100" cy="440" r="24" fill="#1a2235" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="100" y="436" text-anchor="middle" font-size="16" fill="#f59e0b">👤</text>
+          <text x="100" y="478" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="500">Compliance</text>
+          <text x="100" y="491" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="500">Officer</text>
+          <text x="100" y="506" text-anchor="middle" font-size="9" fill="#94a3b8">[ Person ]</text>
+
+          <!-- FCA / Regulator (top-right external) -->
+          <rect x="680" y="60" width="180" height="80" rx="2" fill="#1a2235" stroke="rgba(239,68,68,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="770" y="95" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="500">FCA / BaFin / SEC</text>
+          <text x="770" y="113" text-anchor="middle" font-size="9" fill="#ef4444">[ External Regulator ]</text>
+          <text x="770" y="128" text-anchor="middle" font-size="8" fill="#475569">Requests audit evidence</text>
+
+          <!-- Gemini API (right external) -->
+          <rect x="680" y="200" width="180" height="80" rx="2" fill="#1a2235" stroke="rgba(167,139,250,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="770" y="235" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="500">Gemini 2.0 Flash</text>
+          <text x="770" y="253" text-anchor="middle" font-size="9" fill="#a78bfa">[ Google AI Studio ]</text>
+          <text x="770" y="268" text-anchor="middle" font-size="8" fill="#475569">Agent reasoning · Free tier</text>
+
+          <!-- Firestore (bottom-right external) -->
+          <rect x="680" y="340" width="180" height="80" rx="2" fill="#1a2235" stroke="rgba(16,185,129,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="770" y="375" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="500">Cloud Firestore</text>
+          <text x="770" y="393" text-anchor="middle" font-size="9" fill="#10b981">[ Google Cloud · GCP ]</text>
+          <text x="770" y="408" text-anchor="middle" font-size="8" fill="#475569">Audit log · Model registry</text>
+
+          <!-- GitHub Pages (bottom-centre external) -->
+          <rect x="320" y="430" width="200" height="70" rx="2" fill="#1a2235" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="420" y="460" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="500">GitHub Pages</text>
+          <text x="420" y="478" text-anchor="middle" font-size="9" fill="#94a3b8">[ Static Host ]</text>
+          <text x="420" y="493" text-anchor="middle" font-size="8" fill="#475569">Design docs · Portfolio site</text>
+
+          <!-- Arrows -->
+          <!-- Doc Lead → AEGIS -->
+          <line x1="128" y1="260" x2="328" y2="260" stroke="rgba(0,212,200,0.5)" stroke-width="1.5" marker-end="url(#arr)"/>
+          <rect x="172" y="242" width="112" height="16" rx="1" fill="#080c14"/>
+          <text x="228" y="253" text-anchor="middle" font-size="8" fill="#94a3b8">submits intake · views audit</text>
+
+          <!-- Compliance → AEGIS -->
+          <line x1="124" y1="432" x2="330" y2="320" stroke="rgba(245,158,11,0.4)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-dim)"/>
+          <text x="210" y="388" text-anchor="middle" font-size="8" fill="#94a3b8" transform="rotate(-35,210,388)">reviews dashboard</text>
+
+          <!-- AEGIS → Gemini -->
+          <line x1="570" y1="248" x2="678" y2="245" stroke="rgba(167,139,250,0.5)" stroke-width="1.5" marker-end="url(#arr)"/>
+          <rect x="584" y="230" width="80" height="14" rx="1" fill="#080c14"/>
+          <text x="624" y="240" text-anchor="middle" font-size="8" fill="#a78bfa">agent prompts</text>
+
+          <!-- AEGIS → Firestore -->
+          <line x1="570" y1="295" x2="678" y2="360" stroke="rgba(16,185,129,0.5)" stroke-width="1.5" marker-end="url(#arr)"/>
+          <rect x="590" y="315" width="76" height="14" rx="1" fill="#080c14"/>
+          <text x="628" y="325" text-anchor="middle" font-size="8" fill="#10b981">writes audit log</text>
+
+          <!-- FCA → AEGIS -->
+          <line x1="680" y1="108" x2="570" y2="218" stroke="rgba(239,68,68,0.4)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-dim)"/>
+          <text x="648" y="166" text-anchor="middle" font-size="8" fill="#ef4444">requests evidence</text>
+
+          <!-- AEGIS → GitHub Pages -->
+          <line x1="420" y1="320" x2="420" y2="428" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-dim)"/>
+          <text x="435" y="380" text-anchor="start" font-size="8" fill="#475569">static build</text>
+
+          <!-- Legend -->
+          <rect x="36" y="480" width="260" height="52" rx="2" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <text x="48" y="498" font-size="8" fill="#475569" letter-spacing="1" font-weight="500">LEGEND</text>
+          <line x1="48" y1="510" x2="76" y2="510" stroke="rgba(0,212,200,0.5)" stroke-width="1.5"/>
+          <text x="82" y="513" font-size="8" fill="#94a3b8">Primary interaction</text>
+          <line x1="48" y1="523" x2="76" y2="523" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="82" y="526" font-size="8" fill="#94a3b8">Secondary / async</text>
+          <rect x="160" y="504" width="10" height="10" rx="1" fill="none" stroke="rgba(239,68,68,0.4)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="176" y="513" font-size="8" fill="#94a3b8">External system</text>
+          <rect x="160" y="518" width="10" height="10" rx="1" fill="#111827" stroke="#00d4c8" stroke-width="1.5"/>
+          <text x="176" y="526" font-size="8" fill="#94a3b8">AEGIS system</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 03: C4 LEVEL 2 — CONTAINER -->
+<section class="section" id="c4-container">
+  <div class="section-inner">
+    <div class="section-label">03 — C4 Model · Level 2</div>
+    <h2 class="section-title">Container<br><em>diagram.</em></h2>
+    <p class="section-lead">The deployable units inside AEGIS — what runs where, how they communicate, and what technology each container uses. At this level of abstraction, architectural decisions about deployment and communication patterns become visible.</p>
+
+    <div class="c4-wrap">
+      <div class="c4-label">C4 Level 2 — Container Diagram · AEGIS internal architecture</div>
+      <div class="c4-frame">
+        <svg viewBox="0 0 960 620" width="960" height="620" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,212,200,0.7)"/>
+            </marker>
+            <marker id="arr2g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(16,185,129,0.7)"/>
+            </marker>
+            <marker id="arr2v" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(167,139,250,0.7)"/>
+            </marker>
+            <marker id="arr2a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,0.7)"/>
+            </marker>
+          </defs>
+          <rect width="960" height="620" fill="#080c14"/>
+
+          <!-- AEGIS boundary -->
+          <rect x="20" y="20" width="920" height="580" rx="2" fill="none" stroke="rgba(0,212,200,0.1)" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="36" y="42" font-size="9" fill="rgba(0,212,200,0.3)" font-weight="500" letter-spacing="2">AEGIS SYSTEM BOUNDARY</text>
+
+          <!-- L1: Static Site -->
+          <rect x="40" y="60" width="200" height="100" rx="2" fill="#111827" stroke="#00d4c8" stroke-width="1"/>
+          <rect x="40" y="60" width="200" height="3" fill="#00d4c8"/>
+          <text x="140" y="95" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="600">Static Site</text>
+          <text x="140" y="110" text-anchor="middle" font-size="8" fill="#00d4c8" letter-spacing="1">[ GitHub Pages ]</text>
+          <text x="140" y="128" text-anchor="middle" font-size="8" fill="#94a3b8">HTML / CSS / JS</text>
+          <text x="140" y="141" text-anchor="middle" font-size="8" fill="#94a3b8">Design doc · Portfolio</text>
+          <text x="140" y="153" text-anchor="middle" font-size="8" fill="#475569">L1 · Free forever</text>
+
+          <!-- L1: Functional App Frontend -->
+          <rect x="40" y="190" width="200" height="100" rx="2" fill="#111827" stroke="#00d4c8" stroke-width="1"/>
+          <rect x="40" y="190" width="200" height="3" fill="#00d4c8"/>
+          <text x="140" y="225" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="600">Functional App UI</text>
+          <text x="140" y="240" text-anchor="middle" font-size="8" fill="#00d4c8" letter-spacing="1">[ Cloud Run · Served ]</text>
+          <text x="140" y="258" text-anchor="middle" font-size="8" fill="#94a3b8">HTML / CSS / JS</text>
+          <text x="140" y="271" text-anchor="middle" font-size="8" fill="#94a3b8">Intake form · Dashboard</text>
+          <text x="140" y="283" text-anchor="middle" font-size="8" fill="#475569">L1 · Free tier</text>
+
+          <!-- L2: FastAPI Backend -->
+          <rect x="360" y="130" width="240" height="160" rx="2" fill="#1a1a2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <rect x="360" y="130" width="240" height="3" fill="#f59e0b"/>
+          <text x="480" y="165" text-anchor="middle" font-size="12" fill="#f1f5f9" font-weight="600">FastAPI Backend</text>
+          <text x="480" y="181" text-anchor="middle" font-size="8" fill="#f59e0b" letter-spacing="1">[ Cloud Run · Python 3.12 ]</text>
+          <text x="480" y="200" text-anchor="middle" font-size="8" fill="#94a3b8">Orchestrator Agent</text>
+          <text x="480" y="214" text-anchor="middle" font-size="8" fill="#94a3b8">5 Specialist Agents</text>
+          <text x="480" y="228" text-anchor="middle" font-size="8" fill="#94a3b8">Policy-as-Context injection</text>
+          <text x="480" y="242" text-anchor="middle" font-size="8" fill="#94a3b8">Pydantic typed schemas</text>
+          <text x="480" y="258" text-anchor="middle" font-size="8" fill="#94a3b8">Rate limiter middleware</text>
+          <text x="480" y="280" text-anchor="middle" font-size="8" fill="#475569">L2 · Scales to zero · Free tier</text>
+
+          <!-- L3: Gemini -->
+          <rect x="720" y="130" width="200" height="90" rx="2" fill="#1a2235" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="820" y="165" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="600">Gemini 2.0 Flash</text>
+          <text x="820" y="181" text-anchor="middle" font-size="8" fill="#a78bfa" letter-spacing="1">[ Google AI Studio ]</text>
+          <text x="820" y="199" text-anchor="middle" font-size="8" fill="#94a3b8">Generative reasoning</text>
+          <text x="820" y="212" text-anchor="middle" font-size="8" fill="#475569">L3 · External · Free tier</text>
+
+          <!-- L3: Policy Store -->
+          <rect x="720" y="250" width="200" height="90" rx="2" fill="#1a2235" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="820" y="285" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="600">Policy Store</text>
+          <text x="820" y="301" text-anchor="middle" font-size="8" fill="#94a3b8" letter-spacing="1">[ Cloud Storage ]</text>
+          <text x="820" y="319" text-anchor="middle" font-size="8" fill="#94a3b8">3 policy documents</text>
+          <text x="820" y="332" text-anchor="middle" font-size="8" fill="#475569">L3 · 5GB free forever</text>
+
+          <!-- L4: Firestore -->
+          <rect x="360" y="380" width="240" height="140" rx="2" fill="#1a2235" stroke="#10b981" stroke-width="1"/>
+          <rect x="360" y="380" width="240" height="3" fill="#10b981"/>
+          <text x="480" y="415" text-anchor="middle" font-size="11" fill="#f1f5f9" font-weight="600">Cloud Firestore</text>
+          <text x="480" y="431" text-anchor="middle" font-size="8" fill="#10b981" letter-spacing="1">[ GCP · NoSQL ]</text>
+          <text x="480" y="452" text-anchor="middle" font-size="8" fill="#94a3b8">audit_log collection</text>
+          <text x="480" y="466" text-anchor="middle" font-size="8" fill="#94a3b8">model_registry collection</text>
+          <text x="480" y="480" text-anchor="middle" font-size="8" fill="#94a3b8">approval_records collection</text>
+          <text x="480" y="494" text-anchor="middle" font-size="8" fill="#94a3b8">intake_submissions collection</text>
+          <text x="480" y="512" text-anchor="middle" font-size="8" fill="#475569">L4 · 50K reads/day free</text>
+
+          <!-- Arrows -->
+          <!-- UI → Backend -->
+          <line x1="240" y1="240" x2="358" y2="210" stroke="rgba(0,212,200,0.6)" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <rect x="256" y="218" width="88" height="14" rx="1" fill="#080c14"/>
+          <text x="300" y="228" text-anchor="middle" font-size="8" fill="#00d4c8">HTTP/REST · JSON</text>
+
+          <!-- Backend → Gemini -->
+          <line x1="600" y1="195" x2="718" y2="185" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arr2v)"/>
+          <rect x="618" y="178" width="80" height="13" rx="1" fill="#080c14"/>
+          <text x="658" y="188" text-anchor="middle" font-size="8" fill="#a78bfa">generateContent()</text>
+
+          <!-- Backend → Policy Store -->
+          <line x1="600" y1="240" x2="718" y2="280" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="665" y="256" text-anchor="middle" font-size="8" fill="#475569">reads policy</text>
+
+          <!-- Backend → Firestore -->
+          <line x1="480" y1="292" x2="480" y2="378" stroke="rgba(16,185,129,0.6)" stroke-width="1.5" marker-end="url(#arr2g)"/>
+          <rect x="440" y="328" width="80" height="13" rx="1" fill="#080c14"/>
+          <text x="480" y="338" text-anchor="middle" font-size="8" fill="#10b981">writes audit log</text>
+
+          <!-- Layer labels -->
+          <text x="36" y="320" font-size="8" fill="rgba(0,212,200,0.3)" font-weight="500" letter-spacing="1">L1 PRESENTATION</text>
+          <text x="360" y="122" font-size="8" fill="rgba(245,158,11,0.4)" font-weight="500" letter-spacing="1">L2 ORCHESTRATION</text>
+          <text x="720" y="122" font-size="8" fill="rgba(167,139,250,0.4)" font-weight="500" letter-spacing="1">L3 INTELLIGENCE</text>
+          <text x="360" y="372" font-size="8" fill="rgba(16,185,129,0.4)" font-weight="500" letter-spacing="1">L4 INFRASTRUCTURE</text>
+
+          <!-- User -->
+          <circle cx="140" cy="520" r="22" fill="#1a2235" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="140" y="517" text-anchor="middle" font-size="14" fill="#00d4c8">👤</text>
+          <text x="140" y="556" text-anchor="middle" font-size="9" fill="#f1f5f9">Doc Lead</text>
+          <line x1="140" y1="498" x2="140" y2="292" stroke="rgba(0,212,200,0.3)" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arr2)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 04: C4 LEVEL 3 — COMPONENT -->
+<section class="section" id="c4-component" style="background:var(--deep);">
+  <div class="section-inner">
+    <div class="section-label">04 — C4 Model · Level 3</div>
+    <h2 class="section-title">Component diagram —<br><em>the orchestration layer.</em></h2>
+    <p class="section-lead">Inside the FastAPI backend: how the Orchestrator routes to specialist agents, how policy context is injected, and how every agent's decision is wrapped in a plain-language explanation before being returned to the caller.</p>
+
+    <div class="c4-wrap">
+      <div class="c4-label">C4 Level 3 — Component Diagram · Agent Orchestration Layer (L2)</div>
+      <div class="c4-frame">
+        <svg viewBox="0 0 960 580" width="960" height="580" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="arr3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(0,212,200,0.7)"/></marker>
+            <marker id="arr3a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(245,158,11,0.7)"/></marker>
+            <marker id="arr3v" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(167,139,250,0.5)"/></marker>
+          </defs>
+          <rect width="960" height="580" fill="#0d1421"/>
+
+          <!-- FastAPI boundary -->
+          <rect x="20" y="20" width="920" height="540" rx="2" fill="none" stroke="rgba(245,158,11,0.15)" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="36" y="42" font-size="9" fill="rgba(245,158,11,0.4)" font-weight="500" letter-spacing="2">FASTAPI BACKEND · CLOUD RUN · L2 AGENT ORCHESTRATION</text>
+
+          <!-- API Gateway / Rate Limiter -->
+          <rect x="40" y="220" width="140" height="80" rx="2" fill="#111827" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="110" y="251" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">API Gateway</text>
+          <text x="110" y="265" text-anchor="middle" font-size="8" fill="#94a3b8">Rate limiter</text>
+          <text x="110" y="278" text-anchor="middle" font-size="8" fill="#94a3b8">CORS · Auth header</text>
+          <text x="110" y="292" text-anchor="middle" font-size="8" fill="#475569">FastAPI middleware</text>
+
+          <!-- Policy Context Loader -->
+          <rect x="40" y="360" width="140" height="80" rx="2" fill="#111827" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="110" y="391" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Policy Context</text>
+          <text x="110" y="405" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Loader</text>
+          <text x="110" y="421" text-anchor="middle" font-size="8" fill="#94a3b8">Fetches 3 policies from</text>
+          <text x="110" y="434" text-anchor="middle" font-size="8" fill="#94a3b8">Cloud Storage · injects</text>
+
+          <!-- Orchestrator -->
+          <rect x="260" y="190" width="180" height="140" rx="2" fill="#1a1a2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <rect x="260" y="190" width="180" height="3" fill="#f59e0b"/>
+          <text x="350" y="226" text-anchor="middle" font-size="12" fill="#f1f5f9" font-weight="600">Orchestrator</text>
+          <text x="350" y="242" text-anchor="middle" font-size="8" fill="#f59e0b" letter-spacing="1">[ Master Agent ]</text>
+          <text x="350" y="260" text-anchor="middle" font-size="8" fill="#94a3b8">Receives intake payload</text>
+          <text x="350" y="274" text-anchor="middle" font-size="8" fill="#94a3b8">Determines agent sequence</text>
+          <text x="350" y="288" text-anchor="middle" font-size="8" fill="#94a3b8">Assembles final response</text>
+          <text x="350" y="302" text-anchor="middle" font-size="8" fill="#94a3b8">Writes to Firestore</text>
+          <text x="350" y="320" text-anchor="middle" font-size="8" fill="#475569">policy-as-context · Pydantic</text>
+
+          <!-- 5 Agents (right side) -->
+          <!-- Intake -->
+          <rect x="540" y="60" width="160" height="80" rx="2" fill="#111827" stroke="#00d4c8" stroke-width="1"/>
+          <text x="620" y="89" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Intake Agent</text>
+          <text x="620" y="104" text-anchor="middle" font-size="8" fill="#00d4c8">validates fields · routes</text>
+          <text x="620" y="118" text-anchor="middle" font-size="8" fill="#94a3b8">Policy: Doc Min Standards</text>
+          <text x="620" y="130" text-anchor="middle" font-size="8" fill="#475569">Returns: validated payload</text>
+
+          <!-- Classification -->
+          <rect x="540" y="170" width="160" height="80" rx="2" fill="#111827" stroke="#f59e0b" stroke-width="1"/>
+          <text x="620" y="199" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Classification Agent</text>
+          <text x="620" y="214" text-anchor="middle" font-size="8" fill="#f59e0b">EU AI Act Annex III logic</text>
+          <text x="620" y="228" text-anchor="middle" font-size="8" fill="#94a3b8">Assigns risk tier</text>
+          <text x="620" y="241" text-anchor="middle" font-size="8" fill="#475569">Returns: tier + rationale</text>
+
+          <!-- Oversight -->
+          <rect x="540" y="280" width="160" height="80" rx="2" fill="#111827" stroke="#a78bfa" stroke-width="1"/>
+          <text x="620" y="309" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Oversight Agent</text>
+          <text x="620" y="324" text-anchor="middle" font-size="8" fill="#a78bfa">approval gate logic</text>
+          <text x="620" y="338" text-anchor="middle" font-size="8" fill="#94a3b8">reviewer requirements</text>
+          <text x="620" y="351" text-anchor="middle" font-size="8" fill="#475569">Returns: oversight record</text>
+
+          <!-- Audit -->
+          <rect x="540" y="390" width="160" height="80" rx="2" fill="#111827" stroke="#10b981" stroke-width="1"/>
+          <text x="620" y="419" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Audit Agent</text>
+          <text x="620" y="434" text-anchor="middle" font-size="8" fill="#10b981">assembles evidence chain</text>
+          <text x="620" y="448" text-anchor="middle" font-size="8" fill="#94a3b8">Annex IV documentation</text>
+          <text x="620" y="461" text-anchor="middle" font-size="8" fill="#475569">Returns: audit package</text>
+
+          <!-- Explainability -->
+          <rect x="540" y="480" width="160" height="70" rx="2" fill="#111827" stroke="#ef4444" stroke-width="1"/>
+          <text x="620" y="507" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Explainability Agent</text>
+          <text x="620" y="522" text-anchor="middle" font-size="8" fill="#ef4444">wraps every decision</text>
+          <text x="620" y="536" text-anchor="middle" font-size="8" fill="#94a3b8">plain-language "why"</text>
+
+          <!-- Gemini (far right) -->
+          <rect x="780" y="230" width="140" height="80" rx="2" fill="#1a2235" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="850" y="262" text-anchor="middle" font-size="10" fill="#f1f5f9" font-weight="600">Gemini API</text>
+          <text x="850" y="278" text-anchor="middle" font-size="8" fill="#a78bfa">google-generativeai</text>
+          <text x="850" y="294" text-anchor="middle" font-size="8" fill="#475569">T=0.1 · JSON mode</text>
+
+          <!-- Arrows -->
+          <line x1="180" y1="260" x2="258" y2="260" stroke="rgba(0,212,200,0.6)" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <line x1="180" y1="400" x2="258" y2="290" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arr3)"/>
+
+          <!-- Orchestrator → agents -->
+          <line x1="440" y1="230" x2="538" y2="110" stroke="rgba(0,212,200,0.5)" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="440" y1="240" x2="538" y2="218" stroke="rgba(245,158,11,0.5)" stroke-width="1" marker-end="url(#arr3a)"/>
+          <line x1="440" y1="260" x2="538" y2="320" stroke="rgba(167,139,250,0.5)" stroke-width="1" marker-end="url(#arr3v)"/>
+          <line x1="440" y1="285" x2="538" y2="430" stroke="rgba(16,185,129,0.5)" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="440" y1="300" x2="538" y2="510" stroke="rgba(239,68,68,0.5)" stroke-width="1" marker-end="url(#arr3)"/>
+
+          <!-- Agents → Gemini -->
+          <line x1="700" y1="210" x2="778" y2="260" stroke="rgba(167,139,250,0.3)" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arr3v)"/>
+          <line x1="700" y1="320" x2="778" y2="280" stroke="rgba(167,139,250,0.3)" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arr3v)"/>
+          <line x1="700" y1="430" x2="778" y2="295" stroke="rgba(167,139,250,0.3)" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arr3v)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 05: AGENT DESIGN -->
+<section class="section" id="agents">
+  <div class="section-inner">
+    <div class="section-label">05 — Agent Orchestration Design</div>
+    <h2 class="section-title">Five specialist agents.<br><em>One governance outcome.</em></h2>
+    <p class="section-lead">Each agent owns exactly one governance responsibility. No agent does more than one thing. This is not an architectural preference — it is an IAPP AIGP explainability requirement. A system where one agent does everything cannot explain what it did or why. Single-responsibility agents produce single-responsibility explanations.</p>
+
+    <div class="agents-grid">
+      <div class="agent-card teal">
+        <div class="agent-n">Agent 01</div>
+        <div class="agent-icon">⬡</div>
+        <div class="agent-name">Intake Agent</div>
+        <div class="agent-role">Receives the Documentation Lead's submission. Validates all mandatory fields against the Model Documentation Minimum Standards Policy. Blocks incomplete submissions before any downstream agent is called. Returns a structured payload or a field-level rejection with a plain-language explanation of what is missing and why it is required.</div>
+        <div class="agent-policy">Enforces: Model Documentation Minimum Standards Policy §5 · EU AI Act Annex IV §1</div>
+      </div>
+
+      <div class="agent-card amber">
+        <div class="agent-n">Agent 02</div>
+        <div class="agent-icon">◈</div>
+        <div class="agent-name">Classification Agent</div>
+        <div class="agent-role">Applies EU AI Act Annex III logic to classify the submitted AI system by risk tier: Prohibited, High-Risk, Limited-Risk, or Minimal-Risk. The classification is not hardcoded — it is reasoned by Gemini against the Annex III criteria injected as context. Every classification comes with a plain-language explanation: which criterion triggered the tier, and what compliance obligations follow from it.</div>
+        <div class="agent-policy">Enforces: EU AI Act Articles 6–7, Annex III · NIST AI RMF GOVERN 1.4</div>
+      </div>
+
+      <div class="agent-card violet">
+        <div class="agent-n">Agent 03</div>
+        <div class="agent-icon">◉</div>
+        <div class="agent-name">Oversight Agent</div>
+        <div class="agent-role">Determines the human oversight requirements for the artifact based on its risk tier and content type. Specifies who must review, what they must verify, and what constitutes a valid approval record. Generates the oversight record template and tracks reviewer identity once approval is submitted. A record that cannot be linked to a named, qualified reviewer is rejected.</div>
+        <div class="agent-policy">Enforces: Human Oversight Documentation Standard · EU AI Act Article 14 · SR 11-7 §IV</div>
+      </div>
+
+      <div class="agent-card green">
+        <div class="agent-n">Agent 04</div>
+        <div class="agent-icon">▣</div>
+        <div class="agent-name">Audit Agent</div>
+        <div class="agent-role">Assembles the complete evidence chain for any AI artifact on demand: intake record, classification decision with rationale, oversight record with reviewer identity, version history, and policy citations. The output is an Annex IV-compliant technical documentation bundle — structured, timestamped, and ready to send to a regulator within minutes of request. This is the agent that answers the FCA's Section 165 notice.</div>
+        <div class="agent-policy">Enforces: EU AI Act Annex IV · FCA SYSC · SR 11-7 Model Documentation</div>
+      </div>
+
+      <div class="agent-card red-c">
+        <div class="agent-n">Agent 05</div>
+        <div class="agent-icon">◎</div>
+        <div class="agent-name">Explainability Agent</div>
+        <div class="agent-role">Wraps every decision made by agents 01–04 in a plain-language explanation written for a non-technical audience. Not a post-processing step — this agent is called by every other agent before it returns its result. The explanation answers three questions: what did the system decide, why did it decide that, and what does the human need to do next. This is IAPP AIGP's explainability principle operationalised as code.</div>
+        <div class="agent-policy">Enforces: IAPP AIGP Explainability Principle · EU AI Act Article 13 · NIST AI RMF GOVERN 6.2</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 06: ADRs -->
+<section class="section" id="adrs" style="background:var(--deep);">
+  <div class="section-inner">
+    <div class="section-label">06 — Architecture Decision Records</div>
+    <h2 class="section-title">Five decisions.<br><em>All justified.</em></h2>
+    <p class="section-lead">Architecture Decision Records document why the system is built the way it is — not just what was chosen, but what was considered and rejected, and the consequences of each decision. In a governance system, ADRs are themselves a governance artifact. Click any record to expand.</p>
+
+    <div class="adr-list">
+
+      <!-- ADR 001 -->
+      <div class="adr-card">
+        <div class="adr-header" onclick="toggleADR('adr1')">
+          <div class="adr-id">ADR-001</div>
+          <div class="adr-title-wrap">
+            <div class="adr-title">Cloud Run over App Engine or Cloud Functions</div>
+            <div class="adr-subtitle">Backend compute host for the FastAPI agent orchestration layer</div>
+          </div>
+          <div class="adr-status"><div class="adr-badge accepted">Accepted</div></div>
+          <div class="adr-toggle" id="adr1-toggle">+</div>
+        </div>
+        <div class="adr-body" id="adr1">
+          <div class="adr-section">
+            <div class="adr-section-label">Context</div>
+            <div class="adr-section-body">The AEGIS backend needs to host a Python FastAPI application that runs five agents per request. The application is a portfolio project with intermittent traffic. Infrastructure cost must be zero at current scale. The host must be deployable from a GCP free trial account.</div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Options considered</div>
+            <div class="adr-options">
+              <div class="adr-option chosen">
+                <div class="adr-option-label">✓ Chosen — Cloud Run</div>
+                <div class="adr-option-text">Serverless containers. Scales to zero. 2M requests/month free. Supports any language or framework. Deploy a Docker container with a single gcloud command. No idle cost.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — App Engine</div>
+                <div class="adr-option-text">More opinionated runtime. Free tier is more restrictive for custom frameworks. Instance startup is slower. Less suited to containerised agentic workloads.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Cloud Functions</div>
+                <div class="adr-option-text">Function-level granularity is too fine for an orchestration layer. Managing five functions separately adds deployment complexity with no architectural benefit at this scale.</div>
+              </div>
+            </div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Consequences</div>
+            <div class="adr-section-body"><strong>Positive:</strong> Zero idle cost. Full framework flexibility. Docker-based deployment is transferable to any enterprise container platform. Demonstrates production-grade containerisation skills. <strong>Negative:</strong> Cold start latency (~1s) on first request after idle period. Acceptable for a portfolio app; would require minimum instances in production.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADR 002 -->
+      <div class="adr-card">
+        <div class="adr-header" onclick="toggleADR('adr2')">
+          <div class="adr-id">ADR-002</div>
+          <div class="adr-title-wrap">
+            <div class="adr-title">FastAPI over Flask or Django for agent orchestration</div>
+            <div class="adr-subtitle">Python web framework for the L2 backend</div>
+          </div>
+          <div class="adr-status"><div class="adr-badge accepted">Accepted</div></div>
+          <div class="adr-toggle" id="adr2-toggle">+</div>
+        </div>
+        <div class="adr-body" id="adr2">
+          <div class="adr-section">
+            <div class="adr-section-label">Context</div>
+            <div class="adr-section-body">The backend needs to handle structured JSON payloads from the intake form, route them through multiple agents, and return typed, validated responses. Pydantic schema validation is a requirement because agent outputs must be predictable for downstream consumption.</div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Options considered</div>
+            <div class="adr-options">
+              <div class="adr-option chosen">
+                <div class="adr-option-label">✓ Chosen — FastAPI</div>
+                <div class="adr-option-text">Native Pydantic integration. Automatic OpenAPI documentation generation. Async support for concurrent agent calls. Type hints are enforced at runtime. Standard in financial services Python backends.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Flask</div>
+                <div class="adr-option-text">No native schema validation. Async support requires additional libraries. OpenAPI docs require manual configuration. Less appropriate for typed, agent-driven payloads.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Django</div>
+                <div class="adr-option-text">Significant overhead for an API-only service. ORM and template engine are unnecessary. Boot time and footprint are too large for a Cloud Run container that scales to zero.</div>
+              </div>
+            </div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Consequences</div>
+            <div class="adr-section-body"><strong>Positive:</strong> Auto-generated /docs endpoint makes the API self-documenting — directly relevant for a governance system. Pydantic enforces the same typed schema discipline AEGIS requires of the AI artifacts it governs. FastAPI is the dominant framework in the enterprise Python AI/ML ecosystem. <strong>Negative:</strong> Slightly steeper learning curve than Flask for contributors unfamiliar with async Python.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADR 003 -->
+      <div class="adr-card">
+        <div class="adr-header" onclick="toggleADR('adr3')">
+          <div class="adr-id">ADR-003</div>
+          <div class="adr-title-wrap">
+            <div class="adr-title">Server-side Gemini API key over user-supplied key</div>
+            <div class="adr-subtitle">API key management pattern for the intelligence layer</div>
+          </div>
+          <div class="adr-status"><div class="adr-badge accepted">Accepted</div></div>
+          <div class="adr-toggle" id="adr3-toggle">+</div>
+        </div>
+        <div class="adr-body" id="adr3">
+          <div class="adr-section">
+            <div class="adr-section-label">Context</div>
+            <div class="adr-section-body">The functional app calls the Gemini API for agent reasoning. The API key must be managed in a way that is secure, cost-controlled, and frictionless for end users. Google AI Studio provides a free tier with rate limiting built in.</div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Options considered</div>
+            <div class="adr-options">
+              <div class="adr-option chosen">
+                <div class="adr-option-label">✓ Chosen — Server-side key</div>
+                <div class="adr-option-text">Key stored in Cloud Run environment variable. Never exposed to browser. Users experience zero friction. Google AI Studio rate limiting provides natural cost governance. Free tier is sufficient at portfolio traffic volumes.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — User-supplied key</div>
+                <div class="adr-option-text">Increases user friction. Requires API key input UI. Inconsistent experience for users without a Google AI Studio account. Appropriate for demo/simulation mode only — not the functional app.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Anthropic API</div>
+                <div class="adr-option-text">No free tier. Every agent invocation incurs cost to the developer. Not viable for a public-facing portfolio app. Gemini 2.0 Flash provides equivalent reasoning capability for governance classification tasks.</div>
+              </div>
+            </div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Consequences</div>
+            <div class="adr-section-body"><strong>Positive:</strong> Zero user friction. Zero ongoing API cost. Key never in browser — no client-side credential exposure risk. Rate limiting is handled by Google, not by custom middleware. <strong>Negative:</strong> Server-side key means any abuse of the endpoint is billed to the developer's quota. Mitigated by Cloud Run's natural request throttling and Google AI Studio's built-in rate limits.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADR 004 -->
+      <div class="adr-card">
+        <div class="adr-header" onclick="toggleADR('adr4')">
+          <div class="adr-id">ADR-004</div>
+          <div class="adr-title-wrap">
+            <div class="adr-title">Policy-as-Context over a vector database for document retrieval</div>
+            <div class="adr-subtitle">How governance policies are made available to agents at reasoning time</div>
+          </div>
+          <div class="adr-status"><div class="adr-badge accepted">Accepted</div></div>
+          <div class="adr-toggle" id="adr4-toggle">+</div>
+        </div>
+        <div class="adr-body" id="adr4">
+          <div class="adr-section">
+            <div class="adr-section-label">Context</div>
+            <div class="adr-section-body">Agents need access to the three governance policies to reason against. Options range from hardcoded rules to RAG with a vector database. The policies are short (each under 10 pages), stable (quarterly review cycle), and authoritative — every agent must reason against the full text, not a chunk.</div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Options considered</div>
+            <div class="adr-options">
+              <div class="adr-option chosen">
+                <div class="adr-option-label">✓ Chosen — Policy-as-Context</div>
+                <div class="adr-option-text">Full policy text injected into the system prompt of every agent call. No retrieval latency. No chunk boundary errors. Policy is the reasoning substrate, not a retrieved reference. Gemini 2.0 Flash's 1M token context window makes this trivial.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Vector DB (RAG)</div>
+                <div class="adr-option-text">Unnecessary complexity for documents this size. Chunk boundaries risk retrieving partial policy clauses. Adds infrastructure cost (Pinecone, Vertex AI Vector Search). Not appropriate when the full document fits in context.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Hardcoded rules</div>
+                <div class="adr-option-text">Removes explainability. A hardcoded rule cannot explain itself in plain language. Breaks when policy changes. Defeats the purpose of a generative AI governance system.</div>
+              </div>
+            </div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Consequences</div>
+            <div class="adr-section-body"><strong>Positive:</strong> Policy changes take effect immediately on next deployment — no re-embedding, no index rebuild. The system is self-consistent: it governs AI documentation using the same policies it enforces. Explainability is natural — the agent can cite the exact policy clause it reasoned against. <strong>Negative:</strong> Slightly larger prompt payload per request. Negligible at this scale.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADR 005 -->
+      <div class="adr-card">
+        <div class="adr-header" onclick="toggleADR('adr5')">
+          <div class="adr-id">ADR-005</div>
+          <div class="adr-title-wrap">
+            <div class="adr-title">Firestore over Cloud SQL for the governance audit log</div>
+            <div class="adr-subtitle">Persistence layer for audit records, model registry, and approval events</div>
+          </div>
+          <div class="adr-status"><div class="adr-badge accepted">Accepted</div></div>
+          <div class="adr-toggle" id="adr5-toggle">+</div>
+        </div>
+        <div class="adr-body" id="adr5">
+          <div class="adr-section">
+            <div class="adr-section-label">Context</div>
+            <div class="adr-section-body">Audit records need to be written immediately after each governance event (intake, classification, approval, audit package generation), retrievable on demand within seconds, and immutable once written. The schema will evolve as new agent types are added.</div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Options considered</div>
+            <div class="adr-options">
+              <div class="adr-option chosen">
+                <div class="adr-option-label">✓ Chosen — Firestore</div>
+                <div class="adr-option-text">NoSQL document model matches the variable structure of governance records. 50K reads/day free. Schema-flexible — new agent outputs can be added without migrations. Native GCP integration — no VPC connector needed from Cloud Run.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — Cloud SQL</div>
+                <div class="adr-option-text">Relational model is too rigid for evolving governance record schemas. Requires a VPC connector from Cloud Run (additional cost). No always-free tier — minimum instance cost even when idle.</div>
+              </div>
+              <div class="adr-option">
+                <div class="adr-option-label">Rejected — In-memory only</div>
+                <div class="adr-option-text">Cloud Run scales to zero — in-memory state is lost between requests. Audit logs that exist only in memory are not audit logs. Unacceptable for a system claiming regulatory compliance.</div>
+              </div>
+            </div>
+          </div>
+          <div class="adr-section">
+            <div class="adr-section-label">Consequences</div>
+            <div class="adr-section-body"><strong>Positive:</strong> Zero cost within free tier limits. Document model is naturally audit-friendly — each governance event is a discrete document with a timestamp. Schema evolves without database migrations. <strong>Negative:</strong> No complex joins or aggregation queries. Acceptable — governance queries are document lookups by artifact ID, not analytical joins.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 07: TECH STACK -->
+<section class="section" id="stack">
+  <div class="section-inner">
+    <div class="section-label">07 — Technology Stack</div>
+    <h2 class="section-title">Every component.<br><em>Every cost.</em></h2>
+    <p class="section-lead">The complete technology inventory — matched to the dominant stack in enterprise financial services AI environments, optimised for zero ongoing cost, and justified by the ADRs above.</p>
+
+    <table class="stack-table">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Technology</th>
+          <th>Layer</th>
+          <th>Purpose</th>
+          <th>Cost</th>
+          <th>FS Precedent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="stack-name">Frontend UI</span>HTML5 · CSS3 · Vanilla JS</td>
+          <td>Zero framework — maximum portability, maximum GitHub readability</td>
+          <td>L1</td>
+          <td>Intake form, simulation, dashboard, design docs</td>
+          <td><span class="cost-free">FREE · GitHub Pages</span></td>
+          <td>Standard across all FS web portals</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">API Backend</span>Python 3.12 · FastAPI</td>
+          <td>Async web framework with native Pydantic schema validation and OpenAPI generation</td>
+          <td>L2</td>
+          <td>Agent orchestration, request routing, rate limiting</td>
+          <td><span class="cost-free">FREE · Cloud Run always-free</span></td>
+          <td>Python dominates FS AI/ML backends (Goldman, JPM, Citadel)</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Agent Framework</span>Custom Python · Pydantic</td>
+          <td>Five typed agent functions. No external agent framework — full control, full auditability</td>
+          <td>L2</td>
+          <td>Intake, Classification, Oversight, Audit, Explainability agents</td>
+          <td><span class="cost-free">FREE · Open source</span></td>
+          <td>Custom agents preferred over frameworks in regulated environments</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">LLM</span>Gemini 2.0 Flash</td>
+          <td>Google's latest fast model. 1M token context window — entire policy corpus fits. JSON mode for structured outputs</td>
+          <td>L3</td>
+          <td>Agent reasoning, EU AI Act classification, explainability generation</td>
+          <td><span class="cost-free">FREE · Google AI Studio free tier</span></td>
+          <td>Google Cloud AI widely adopted in European FS (GDPR alignment)</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Policy Store</span>Google Cloud Storage</td>
+          <td>Object storage for the three governance policy documents. Loaded into agent context at request time</td>
+          <td>L3</td>
+          <td>Policy-as-Context source of truth</td>
+          <td><span class="cost-free">FREE · 5GB always-free</span></td>
+          <td>GCS standard in GCP-native FS deployments</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Audit Database</span>Cloud Firestore</td>
+          <td>NoSQL document database. Serverless, schema-flexible, native GCP. Collections: audit_log, model_registry, approvals, intakes</td>
+          <td>L4</td>
+          <td>Immutable audit trail, model registry, approval records</td>
+          <td><span class="cost-free">FREE · 50K reads/day always-free</span></td>
+          <td>Firestore used in GCP-native FS compliance tooling</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Container Host</span>Google Cloud Run</td>
+          <td>Serverless container platform. Scales to zero. Docker-based deployment via gcloud run deploy</td>
+          <td>L4</td>
+          <td>Hosts the FastAPI backend. Serves functional app frontend</td>
+          <td><span class="cost-free">FREE · 2M requests/month always-free</span></td>
+          <td>Cloud Run standard for GCP serverless workloads in FS</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Static Hosting</span>GitHub Pages</td>
+          <td>Static site hosting direct from repo. Zero configuration. Custom domain support</td>
+          <td>L1 · L4</td>
+          <td>Design documentation site · Portfolio</td>
+          <td><span class="cost-free">FREE · Always</span></td>
+          <td>GitHub is the universal FS engineering platform</td>
+        </tr>
+        <tr>
+          <td><span class="stack-name">Typography</span>Syne · DM Mono · Instrument Serif</td>
+          <td>Google Fonts — Syne for display headers, DM Mono for data/code, Instrument Serif for editorial accents</td>
+          <td>L1</td>
+          <td>Visual identity — authoritative, institutional, precise</td>
+          <td><span class="cost-free">FREE · Google Fonts</span></td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 08: REGULATORY MAPPING -->
+<section class="section" id="reg-mapping" style="background:var(--deep);">
+  <div class="section-inner">
+    <div class="section-label">08 — Regulatory Mapping</div>
+    <h2 class="section-title">Every requirement.<br><em>Every control.</em></h2>
+    <p class="section-lead">AEGIS is not compliant-by-assertion. Each regulatory requirement is mapped to a specific agent, a specific system capability, and a specific output. This table is the evidence that AEGIS's architecture was designed against real regulatory obligations — not added as an afterthought.</p>
+
+    <div class="reg-map">
+      <div class="reg-map-header">
+        <div class="reg-map-cell">Requirement</div>
+        <div class="reg-map-cell">AEGIS Control</div>
+        <div class="reg-map-cell">Agent / Layer</div>
+        <div class="reg-map-cell">Evidence Produced</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>EU AI Act — Article 9</strong>Risk management system for high-risk AI</div>
+        <div class="reg-map-td">Classification Agent assigns EU AI Act risk tier with Annex III rationale. Risk tier gates downstream documentation requirements.</div>
+        <div class="reg-map-td">Classification Agent · L2<br><span class="check">✓ Automated</span></div>
+        <div class="reg-map-td">Risk classification record with Annex III citation · Firestore audit_log</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>EU AI Act — Article 11 + Annex IV</strong>Technical documentation before market placement</div>
+        <div class="reg-map-td">Intake Agent enforces all Annex IV mandatory fields before documentation proceeds. No incomplete submission passes.</div>
+        <div class="reg-map-td">Intake Agent · L2<br><span class="check">✓ Gate-enforced</span></div>
+        <div class="reg-map-td">Completed intake record with all Annex IV fields · timestamped · Firestore</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>EU AI Act — Article 13</strong>Transparency and provision of information to deployers</div>
+        <div class="reg-map-td">Explainability Agent wraps every agent decision in plain-language output. System cannot return an unexplained result.</div>
+        <div class="reg-map-td">Explainability Agent · L2<br><span class="check">✓ Every decision</span></div>
+        <div class="reg-map-td">Plain-language decision record attached to every governance event</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>EU AI Act — Article 14</strong>Human oversight measures</div>
+        <div class="reg-map-td">Oversight Agent determines reviewer requirements by risk tier. Approval is a system event — timestamped, reviewer-identified, immutable. No undocumented approval is accepted.</div>
+        <div class="reg-map-td">Oversight Agent · L2<br><span class="check">✓ Mandatory gate</span></div>
+        <div class="reg-map-td">Oversight record: reviewer name, qualification, timestamp, decision · Firestore</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>SR 11-7 — §IV</strong>Model documentation — conceptual soundness, limitations, validation</div>
+        <div class="reg-map-td">Intake Agent enforces SR 11-7-aligned mandatory fields including known limitations, validation status, and human oversight requirements.</div>
+        <div class="reg-map-td">Intake Agent · L2<br><span class="check">✓ Field-enforced</span></div>
+        <div class="reg-map-td">Model documentation record with SR 11-7 mandatory fields completed</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>NIST AI RMF — GOVERN 1.4</strong>Accountability mechanisms with feedback loops</div>
+        <div class="reg-map-td">Every agent produces a timestamped, Firestore-persisted record. Dashboard provides real-time compliance metrics. Quarterly reporting auto-generated.</div>
+        <div class="reg-map-td">Audit Agent · L2 + L4<br><span class="check">✓ Real-time</span></div>
+        <div class="reg-map-td">Live compliance dashboard · 5 governance KPIs · quarterly report artifact</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>IAPP AIGP — Human Accountability</strong>Every AI-assisted output has a named human owner</div>
+        <div class="reg-map-td">Oversight Agent requires named reviewer identity at every approval gate. Approval without a named, qualified reviewer is blocked.</div>
+        <div class="reg-map-td">Oversight Agent · L2<br><span class="check">✓ Identity-enforced</span></div>
+        <div class="reg-map-td">Named reviewer record linked to specific artifact version · immutable</div>
+      </div>
+
+      <div class="reg-map-row">
+        <div class="reg-map-td"><strong>FCA / PRA Model Risk Rules</strong>May 2024 — documentation for independent reviewer</div>
+        <div class="reg-map-td">Audit Agent assembles complete evidence chain on demand. Full audit package producible within 4 minutes of request. Designed to answer a Section 165 notice.</div>
+        <div class="reg-map-td">Audit Agent · L2<br><span class="check">✓ On-demand</span></div>
+        <div class="reg-map-td">Complete audit package: intake + classification + oversight + version history · regulator-ready</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PAGE NAV -->
+<div class="page-nav">
+  <a href="index.html" class="page-nav-item">
+    <span class="pn-dir">← Previous</span>
+    <span class="pn-title">Overview</span>
+  </a>
+  <a href="simulation.html" class="page-nav-item" style="text-align:right;">
+    <span class="pn-dir">Next →</span>
+    <span class="pn-title">Simulation</span>
+  </a>
+</div>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="nav-logo-mark">AE</div>
+    <div class="footer-brand"><span>AEGIS</span> — AI Evidence &amp; Governance Integrity System</div>
+  </div>
+  <div class="footer-meta">
+    Page 02 · Architecture · C4 Model + ADRs + Regulatory Mapping<br>
+    Designed by an AIGP-certified AI governance practitioner · © 2026
+  </div>
+</footer>
+
+<script>
+// ADR accordion
+function toggleADR(id) {
+  const body = document.getElementById(id);
+  const toggle = document.getElementById(id + '-toggle');
+  const isOpen = body.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.adr-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.adr-toggle').forEach(t => t.textContent = '+');
+  // Open clicked if it was closed
+  if (!isOpen) {
+    body.classList.add('open');
+    toggle.textContent = '−';
+  }
+}
+
+// Active nav
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.href === window.location.href) a.classList.add('active');
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Simulation — AEGIS</title>
+<meta name="description" content="Watch AEGIS enforce governance in real time. Four scenarios. Five agents. One audit trail — generated in under 4 minutes."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --void:#080c14; --deep:#0d1421; --surface:#111827;
+  --surface-2:#1a2235; --surface-3:#222d42;
+  --border:rgba(255,255,255,0.07); --border-2:rgba(255,255,255,0.13);
+  --teal:#00d4c8; --teal-dim:rgba(0,212,200,0.10); --teal-glow:rgba(0,212,200,0.25);
+  --amber:#f59e0b; --amber-dim:rgba(245,158,11,0.10);
+  --red:#ef4444; --red-dim:rgba(239,68,68,0.10);
+  --green:#10b981; --green-dim:rgba(16,185,129,0.10);
+  --violet:#a78bfa; --violet-dim:rgba(167,139,250,0.10);
+  --ink:#f1f5f9; --ink-mid:#94a3b8; --ink-dim:#475569;
+  --mono:'DM Mono',monospace; --sans:'Syne',sans-serif; --serif:'Instrument Serif',serif;
+  --max:1320px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--void);color:var(--ink);font-family:var(--mono);font-weight:300;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:1000;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:0.5;}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,200,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,200,0.015) 1px,transparent 1px);background-size:80px 80px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:rgba(8,12,20,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:0.12em;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:10px;}
+.nav-logo-mark{width:28px;height:28px;border:1px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;letter-spacing:0.05em;color:var(--teal);font-family:var(--mono);}
+.nav-links{display:flex;gap:0;list-style:none;border-left:1px solid var(--border);}
+.nav-links li{border-right:1px solid var(--border);}
+.nav-links a{display:block;padding:0 22px;height:60px;line-height:60px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mid);text-decoration:none;transition:all 0.2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--teal);background:var(--teal-dim);}
+.nav-github{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--void);background:var(--teal);padding:8px 20px;text-decoration:none;transition:all 0.2s;}
+.nav-github:hover{background:#00f0e2;}
+
+/* HERO */
+.hero{padding:112px 48px 56px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 70% 40%,rgba(0,212,200,0.05) 0%,transparent 70%);}
+.hero-watermark{position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-family:var(--sans);font-size:clamp(100px,14vw,200px);font-weight:800;letter-spacing:-0.04em;color:transparent;-webkit-text-stroke:1px rgba(0,212,200,0.055);pointer-events:none;user-select:none;line-height:1;z-index:0;}
+.hero-inner{position:relative;z-index:1;max-width:var(--max);}
+.breadcrumb{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:28px;}
+.breadcrumb a{color:var(--teal);text-decoration:none;}
+h1{font-family:var(--sans);font-size:clamp(38px,5vw,76px);font-weight:800;line-height:0.95;letter-spacing:-0.03em;color:var(--ink);margin-bottom:8px;}
+h1 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--teal);}
+.hero-sub{font-family:var(--mono);font-size:13px;font-weight:300;line-height:1.8;color:var(--ink-mid);max-width:600px;margin-top:24px;}
+
+/* CONTROLS */
+.controls{padding:32px 48px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end;}
+.ctrl-group{display:flex;flex-direction:column;gap:10px;}
+.ctrl-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-dim);}
+.pill-row{display:flex;gap:4px;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0.04em;padding:9px 18px;border:1px solid var(--border);background:var(--void);color:var(--ink-mid);cursor:pointer;transition:all 0.18s;user-select:none;}
+.pill:hover{border-color:var(--teal);color:var(--teal);}
+.pill.active{background:var(--surface-3);border-color:var(--teal);color:var(--teal);}
+.run-btn{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:14px 36px;background:var(--teal);color:var(--void);border:none;cursor:pointer;transition:all 0.2s;margin-left:auto;flex-shrink:0;}
+.run-btn:hover{background:#00f0e2;}
+.run-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+/* SCENARIO EXPLAINER */
+.explainer{padding:24px 48px;background:var(--void);border-bottom:1px solid var(--border);display:flex;gap:56px;align-items:center;}
+.exp-tag{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px;}
+.exp-title{font-family:var(--serif);font-size:20px;font-style:italic;color:var(--ink);margin-bottom:4px;}
+.exp-body{font-family:var(--mono);font-size:11px;font-weight:300;line-height:1.7;color:var(--ink-mid);max-width:560px;}
+.exp-sla{flex-shrink:0;text-align:right;}
+.exp-sla-n{font-family:var(--sans);font-size:36px;font-weight:800;letter-spacing:-0.04em;color:var(--teal);line-height:1;display:block;}
+.exp-sla-label{font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-dim);}
+
+/* STAGE */
+.stage{display:grid;grid-template-columns:400px 1fr;min-height:700px;border-bottom:1px solid var(--border);}
+
+/* LEFT: INTAKE TERMINAL */
+.intake-col{background:#060a10;padding:28px 24px;display:flex;flex-direction:column;gap:16px;border-right:1px solid var(--border);position:relative;}
+.terminal{background:#080c14;border:1px solid var(--border-2);border-radius:2px;overflow:hidden;display:flex;flex-direction:column;min-height:380px;}
+.terminal-header{background:var(--surface);padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.terminal-dots{display:flex;gap:5px;}
+.terminal-dot{width:10px;height:10px;border-radius:50%;}
+.td-red{background:#ff5f56;}
+.td-amber{background:#ffbd2e;}
+.td-green{background:#27c93f;}
+.terminal-title{font-family:var(--mono);font-size:10px;font-weight:400;color:var(--ink-dim);letter-spacing:0.06em;}
+.terminal-body{flex:1;padding:16px;font-family:var(--mono);font-size:11px;line-height:1.6;overflow-y:auto;}
+.term-line{margin-bottom:3px;animation:termIn 0.15s ease both;}
+@keyframes termIn{from{opacity:0;}to{opacity:1;}}
+.term-prompt{color:var(--teal);}
+.term-key{color:var(--ink-dim);}
+.term-val{color:var(--ink);}
+.term-field{color:var(--amber);}
+.term-ok{color:var(--green);}
+.term-warn{color:var(--amber);}
+.term-err{color:var(--red);}
+.term-comment{color:var(--ink-dim);font-style:italic;}
+.term-cursor{display:inline-block;width:6px;height:12px;background:var(--teal);animation:blink 0.9s step-end infinite;vertical-align:text-bottom;margin-left:1px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* Regulator notice card */
+.reg-notice{background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);padding:16px 18px;display:none;}
+.reg-notice.visible{display:block;}
+.reg-notice-tag{font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.reg-notice-title{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--ink);margin-bottom:6px;line-height:1.4;}
+.reg-notice-body{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-mid);line-height:1.65;}
+.reg-countdown{font-family:var(--sans);font-size:24px;font-weight:800;color:var(--red);letter-spacing:-0.03em;margin-top:10px;}
+
+/* HITL card */
+.hitl-card{background:var(--amber-dim);border:1px solid rgba(245,158,11,0.3);padding:16px 18px;display:none;}
+.hitl-card.visible{display:block;}
+.hitl-tag{font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin-bottom:8px;}
+.hitl-title{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--ink);margin-bottom:6px;line-height:1.4;}
+.hitl-body{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-mid);line-height:1.65;margin-bottom:12px;}
+.hitl-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.hitl-btn{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.hitl-btn.approve{background:rgba(16,185,129,0.2);color:var(--green);border:1px solid rgba(16,185,129,0.3);}
+.hitl-btn.approve:hover{background:rgba(16,185,129,0.35);}
+.hitl-btn.escalate{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.hitl-btn.escalate:hover{background:rgba(239,68,68,0.3);}
+
+/* Audit package */
+.audit-pkg{background:var(--green-dim);border:1px solid rgba(16,185,129,0.3);padding:16px 18px;display:none;}
+.audit-pkg.visible{display:block;}
+.audit-pkg-tag{font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:8px;}
+.audit-pkg-title{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--ink);margin-bottom:10px;line-height:1.4;}
+.audit-items{display:flex;flex-direction:column;gap:4px;}
+.audit-item{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-mid);}
+.audit-check{color:var(--green);font-size:11px;flex-shrink:0;}
+.audit-time{font-family:var(--sans);font-size:20px;font-weight:800;color:var(--teal);letter-spacing:-0.03em;margin-top:10px;}
+
+/* RIGHT: SYSTEM INTERNALS */
+.system-col{background:#080c14;display:flex;flex-direction:column;position:relative;}
+.sys-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.sys-title{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--ink-dim);letter-spacing:0.1em;text-transform:uppercase;}
+.sys-clock{font-family:var(--mono);font-size:13px;color:var(--teal);letter-spacing:0.04em;margin-left:auto;}
+.sys-status{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:3px 8px;border:1px solid;transition:all 0.3s;}
+.sys-status.idle{border-color:var(--border);color:var(--ink-dim);}
+.sys-status.running{border-color:rgba(0,212,200,0.4);color:var(--teal);}
+.sys-status.done{border-color:rgba(16,185,129,0.4);color:var(--green);}
+.sys-status.escalated{border-color:rgba(245,158,11,0.4);color:var(--amber);}
+.sys-status.blocked{border-color:rgba(239,68,68,0.4);color:var(--red);}
+
+/* Pipeline */
+.pipeline{padding:16px 24px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--border);}
+.pipe-node{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid transparent;background:rgba(255,255,255,0.01);transition:all 0.25s;}
+.pipe-node.active{border-color:var(--teal);background:var(--teal-dim);}
+.pipe-node.done{border-color:rgba(16,185,129,0.25);background:var(--green-dim);}
+.pipe-node.error{border-color:rgba(239,68,68,0.3);background:var(--red-dim);}
+.pipe-node.warn{border-color:rgba(245,158,11,0.3);background:var(--amber-dim);}
+.pipe-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.08);transition:all 0.25s;flex-shrink:0;}
+.pipe-node.active .pipe-dot{background:var(--teal);box-shadow:0 0 8px var(--teal);}
+.pipe-node.done .pipe-dot{background:var(--green);}
+.pipe-node.error .pipe-dot{background:var(--red);}
+.pipe-node.warn .pipe-dot{background:var(--amber);}
+.pipe-name{font-family:var(--mono);font-size:10px;font-weight:400;color:rgba(255,255,255,0.3);letter-spacing:0.04em;transition:color 0.25s;}
+.pipe-node.active .pipe-name{color:var(--teal);}
+.pipe-node.done .pipe-name{color:rgba(255,255,255,0.5);}
+.pipe-node.error .pipe-name{color:var(--red);}
+.pipe-node.warn .pipe-name{color:var(--amber);}
+.pipe-sla{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.18);white-space:nowrap;transition:color 0.25s;}
+.pipe-node.active .pipe-sla{color:var(--teal);}
+.pipe-node.done .pipe-sla{color:var(--green);}
+.pipe-node.error .pipe-sla{color:var(--red);}
+.pipe-node.warn .pipe-sla{color:var(--amber);}
+
+/* Reasoning */
+.reasoning-area{flex:1;padding:20px 24px;display:flex;flex-direction:column;overflow:hidden;}
+.reasoning-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.18);margin-bottom:12px;}
+.reasoning-stream{font-family:var(--mono);font-size:11px;font-weight:300;color:rgba(255,255,255,0.45);line-height:1.8;white-space:pre-wrap;overflow-y:auto;flex:1;max-height:260px;}
+.rs-dim{color:rgba(255,255,255,0.2);}
+.rs-teal{color:var(--teal);}
+.rs-green{color:var(--green);}
+.rs-amber{color:var(--amber);}
+.rs-red{color:var(--red);}
+.rs-violet{color:var(--violet);}
+.rs-bold{color:rgba(255,255,255,0.7);font-weight:400;}
+
+/* Explainability panel */
+.explain-panel{border-top:1px solid var(--border);padding:16px 24px;background:var(--deep);}
+.explain-label{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.explain-label::before{content:'◎';font-size:10px;}
+.explain-text{font-family:var(--mono);font-size:11px;font-weight:300;line-height:1.75;color:var(--ink-mid);min-height:48px;}
+
+/* Idle overlay */
+.idle-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,12,20,0.88);pointer-events:none;transition:opacity 0.4s;z-index:10;}
+.idle-overlay.hidden{opacity:0;pointer-events:none;}
+.idle-arrow{font-size:20px;color:rgba(0,212,200,0.35);animation:bounce 1.6s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.idle-text{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:0.06em;text-align:center;line-height:1.6;}
+
+/* HOW IT WORKS */
+.how{padding:80px 48px;border-bottom:1px solid var(--border);}
+.how-inner{max-width:var(--max);margin:0 auto;}
+.how-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--teal);margin-bottom:12px;}
+.how-title{font-family:var(--sans);font-size:clamp(26px,3.5vw,46px);font-weight:800;letter-spacing:-0.03em;line-height:1.05;color:var(--ink);margin-bottom:12px;}
+.how-title em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--teal);}
+.how-lead{font-family:var(--mono);font-size:13px;font-weight:300;line-height:1.8;color:var(--ink-mid);max-width:640px;margin-bottom:48px;}
+.steps-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;}
+.step-card{background:var(--surface);padding:28px 22px;position:relative;overflow:hidden;border:1px solid var(--border);}
+.step-n{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.step-n::after{content:'';flex:1;height:1px;background:var(--border);}
+.step-title{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);margin-bottom:8px;line-height:1.3;}
+.step-body{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-mid);line-height:1.65;}
+.step-agent{margin-top:12px;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--teal);letter-spacing:0.06em;}
+.step-bg{position:absolute;bottom:-10px;right:-4px;font-family:var(--sans);font-size:64px;font-weight:800;color:rgba(255,255,255,0.025);line-height:1;pointer-events:none;user-select:none;}
+
+/* PAGE NAV */
+.page-nav{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border);}
+.page-nav-item{padding:48px;text-decoration:none;color:var(--ink);transition:background 0.2s;display:flex;flex-direction:column;gap:8px;}
+.page-nav-item:hover{background:var(--surface);}
+.page-nav-item+.page-nav-item{border-left:1px solid var(--border);}
+.pn-dir{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-dim);}
+.pn-title{font-family:var(--serif);font-size:24px;font-style:italic;color:var(--teal);}
+
+footer{border-top:1px solid var(--border);padding:32px 48px;display:flex;justify-content:space-between;align-items:center;background:var(--void);}
+.footer-brand{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0.08em;color:var(--ink);}
+.footer-brand span{color:var(--teal);}
+.footer-meta{font-family:var(--mono);font-size:10px;font-weight:300;color:var(--ink-dim);text-align:right;line-height:1.8;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;}
+.fu1{animation-delay:0.1s;}.fu2{animation-delay:0.25s;}
+
+@media(max-width:1100px){.stage{grid-template-columns:1fr;}.intake-col{border-right:none;border-bottom:1px solid var(--border);}.steps-grid{grid-template-columns:repeat(3,1fr);}.explainer{flex-direction:column;gap:16px;}}
+@media(max-width:768px){nav{padding:0 24px;}.nav-links{display:none;}.hero{padding:96px 24px 48px;}.controls{padding:24px;}.how{padding:56px 24px;}.steps-grid{grid-template-columns:1fr 1fr;}.page-nav{grid-template-columns:1fr;}.page-nav-item+.page-nav-item{border-left:none;border-top:1px solid var(--border);}footer{flex-direction:column;gap:12px;text-align:center;padding:24px;}.footer-meta{text-align:center;}.hero-watermark{display:none;}.explainer{padding:20px 24px;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-mark">AE</div>
+    AEGIS
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="simulation.html" class="active">Simulation</a></li>
+    <li><a href="dashboard.html">Dashboard</a></li>
+  </ul>
+  <a href="https://github.com/" class="nav-github" target="_blank">GitHub →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-watermark">SIM</div>
+  <div class="hero-inner">
+    <div class="breadcrumb fade-up">
+      <a href="index.html">AEGIS</a>
+      <span>/</span>
+      <span>Simulation</span>
+    </div>
+    <h1 class="fade-up fu1">Watch AEGIS enforce<br>governance <em>in real time.</em></h1>
+    <p class="hero-sub fade-up fu2">Select a scenario. Watch the regulator notice arrive, the five agents fire in sequence, and the audit trail assemble — in the time it would otherwise take to search three email threads. All scripted. Zero API cost. Exact behaviour of the production system.</p>
+  </div>
+</section>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-group">
+    <div class="ctrl-label">Scenario</div>
+    <div class="pill-row" id="scenario-pills">
+      <div class="pill active" data-val="audit">Regulator audit request</div>
+      <div class="pill" data-val="highrisk">High-risk model intake</div>
+      <div class="pill" data-val="blocked">Incomplete intake — blocked</div>
+      <div class="pill" data-val="hitl">Ambiguous — HITL escalation</div>
+    </div>
+  </div>
+  <button class="run-btn" id="run-btn" onclick="runSimulation()">▶ Run simulation</button>
+</div>
+
+<!-- SCENARIO EXPLAINER -->
+<div class="explainer">
+  <div>
+    <div class="exp-tag">Active scenario</div>
+    <div class="exp-title" id="exp-title">Regulator audit request — FCA Section 165</div>
+    <div class="exp-body" id="exp-body">The FCA has issued a Section 165 information request for the Trade Signal Confidence Scorer. AEGIS receives the request, locates all governance records, assembles the complete Annex IV evidence bundle, and returns a regulator-ready audit package — without a single manual search.</div>
+  </div>
+  <div class="exp-sla">
+    <span class="exp-sla-n" id="exp-sla">&lt; 4 min</span>
+    <span class="exp-sla-label">vs 6–14 days manual</span>
+  </div>
+</div>
+
+<!-- SIMULATOR STAGE -->
+<div class="stage">
+
+  <!-- LEFT: INTAKE / STATUS TERMINAL -->
+  <div class="intake-col">
+
+    <!-- Regulator Notice (scenario 1) -->
+    <div class="reg-notice" id="reg-notice">
+      <div class="reg-notice-tag">⚠ FCA — Section 165 Information Request</div>
+      <div class="reg-notice-title">Re: Trade Signal Confidence Scorer v1.0<br>Ref: FS/2026/MCG/0047</div>
+      <div class="reg-notice-body">Please provide complete technical documentation, risk classification evidence, human oversight records, and version history for the above AI system within 10 business days. Failure to comply may result in supervisory action.</div>
+      <div class="reg-countdown" id="reg-countdown">Day 0 · 09:14</div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="terminal-dots">
+          <div class="terminal-dot td-red"></div>
+          <div class="terminal-dot td-amber"></div>
+          <div class="terminal-dot td-green"></div>
+        </div>
+        <div class="terminal-title" id="term-title">aegis · intake terminal</div>
+      </div>
+      <div class="terminal-body" id="terminal-body">
+        <div class="term-line"><span class="term-prompt">aegis@mcg</span><span class="term-comment"> — ready. select a scenario and press Run.</span></div>
+      </div>
+    </div>
+
+    <!-- HITL Card (scenario 4) -->
+    <div class="hitl-card" id="hitl-card">
+      <div class="hitl-tag">⚠ Human-in-the-Loop — Compliance Officer Action Required</div>
+      <div class="hitl-title">ESG Portfolio Ranker — Risk Classification Ambiguous</div>
+      <div class="hitl-body" id="hitl-body">Classification Agent confidence: 0.61 — below autonomous decision threshold (0.80). Model touches Annex III §5(b) criteria but deployer context is unclear. AEGIS cannot classify autonomously. Compliance Officer review required before documentation proceeds.</div>
+      <div class="hitl-btns">
+        <button class="hitl-btn approve" onclick="hitlResolve('approve')">✓ Confirm High-Risk</button>
+        <button class="hitl-btn escalate" onclick="hitlResolve('escalate')">↑ Escalate to Risk Committee</button>
+      </div>
+    </div>
+
+    <!-- Audit Package (scenario 1 + 2) -->
+    <div class="audit-pkg" id="audit-pkg">
+      <div class="audit-pkg-tag">✓ Audit Package — Regulator Ready</div>
+      <div class="audit-pkg-title" id="audit-pkg-title">Complete evidence bundle assembled</div>
+      <div class="audit-items" id="audit-items"></div>
+      <div class="audit-time" id="audit-time"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: SYSTEM INTERNALS -->
+  <div class="system-col">
+    <div class="idle-overlay" id="idle-overlay">
+      <div class="idle-arrow">↑</div>
+      <div class="idle-text">Select a scenario above<br>then press ▶ Run simulation</div>
+    </div>
+
+    <div class="sys-header">
+      <div class="sys-title">Agent orchestration pipeline</div>
+      <div class="sys-status idle" id="sys-status">IDLE</div>
+      <div class="sys-clock" id="sys-clock">00.00s</div>
+    </div>
+
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-node" id="node-intake">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Intake Agent — field validation + mandatory check</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-policy">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Policy Context Loader — 3 policies injected from Cloud Storage</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-classify">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Classification Agent — EU AI Act Annex III risk tier</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-oversight">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Oversight Agent — reviewer requirements + approval gate</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-gemini">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Gemini 2.0 Flash — reasoning + structured JSON output</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-explain">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Explainability Agent — plain-language decision wrapper</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-audit">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Audit Agent — evidence chain assembly + Annex IV bundle</div>
+        <div class="pipe-sla">—</div>
+      </div>
+      <div class="pipe-node" id="node-firestore">
+        <div class="pipe-dot"></div>
+        <div class="pipe-name">Firestore — immutable audit log write + model registry update</div>
+        <div class="pipe-sla">—</div>
+      </div>
+    </div>
+
+    <div class="reasoning-area">
+      <div class="reasoning-label">Agent reasoning stream — Gemini 2.0 Flash · policy-as-context</div>
+      <div class="reasoning-stream" id="reasoning"></div>
+    </div>
+
+    <div class="explain-panel">
+      <div class="explain-label">Explainability Agent output — why did the system decide this?</div>
+      <div class="explain-text" id="explain-text">Awaiting agent decision...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how">
+  <div class="how-inner">
+    <div class="how-label">How AEGIS works</div>
+    <h2 class="how-title">Six agents. One governance outcome.<br><em>Every decision explained.</em></h2>
+    <p class="how-lead">From the moment a Documentation Lead submits an intake form — or a regulator requests an audit trail — six system components fire in sequence. The simulation above shows each one in real time. Every agent produces a plain-language explanation of its decision before passing control to the next.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-n">01</div>
+        <div class="step-title">Intake Agent validates the submission</div>
+        <div class="step-body">All mandatory fields checked against the Model Documentation Minimum Standards Policy. Missing fields blocked at the gate. No incomplete submission reaches classification.</div>
+        <div class="step-agent">→ Intake Agent · L2</div>
+        <div class="step-bg">01</div>
+      </div>
+      <div class="step-card">
+        <div class="step-n">02</div>
+        <div class="step-title">Policy context loaded from Cloud Storage</div>
+        <div class="step-body">All three governance policies fetched from GCP Cloud Storage and injected into the agent system prompt. Policy changes take effect immediately — no re-embedding, no index rebuild.</div>
+        <div class="step-agent">→ Policy Context Loader · L3</div>
+        <div class="step-bg">02</div>
+      </div>
+      <div class="step-card">
+        <div class="step-n">03</div>
+        <div class="step-title">EU AI Act risk tier classified by Gemini</div>
+        <div class="step-body">Classification Agent sends the intake payload + Annex III criteria to Gemini 2.0 Flash. Returns risk tier (Prohibited / High-Risk / Limited / Minimal) with the exact criterion that triggered it.</div>
+        <div class="step-agent">→ Classification Agent · Gemini · L2/L3</div>
+        <div class="step-bg">03</div>
+      </div>
+      <div class="step-card">
+        <div class="step-n">04</div>
+        <div class="step-title">Oversight requirements determined</div>
+        <div class="step-body">Oversight Agent uses the risk tier to determine who must review, what they must verify, and what constitutes a valid approval record. High-risk systems require qualified SME + Compliance Officer sign-off.</div>
+        <div class="step-agent">→ Oversight Agent · L2</div>
+        <div class="step-bg">04</div>
+      </div>
+      <div class="step-card">
+        <div class="step-n">05</div>
+        <div class="step-title">Every decision explained in plain language</div>
+        <div class="step-body">Explainability Agent wraps every preceding decision: what was decided, which policy clause triggered it, and what the Documentation Lead must do next. No black boxes. No unexplained classifications.</div>
+        <div class="step-agent">→ Explainability Agent · L2</div>
+        <div class="step-bg">05</div>
+      </div>
+      <div class="step-card">
+        <div class="step-n">06</div>
+        <div class="step-title">Audit package written to Firestore</div>
+        <div class="step-body">Audit Agent assembles the complete Annex IV evidence bundle: intake record, risk classification, oversight log, version history, policy citations — timestamped and immutably persisted to Firestore. Regulator-ready in under 4 minutes.</div>
+        <div class="step-agent">→ Audit Agent · Firestore · L2/L4</div>
+        <div class="step-bg">06</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE NAV -->
+<div class="page-nav">
+  <a href="architecture.html" class="page-nav-item">
+    <span class="pn-dir">← Previous</span>
+    <span class="pn-title">Architecture</span>
+  </a>
+  <a href="dashboard.html" class="page-nav-item" style="text-align:right;">
+    <span class="pn-dir">Next →</span>
+    <span class="pn-title">Live Dashboard</span>
+  </a>
+</div>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="nav-logo-mark">AE</div>
+    <div class="footer-brand"><span>AEGIS</span> — AI Evidence &amp; Governance Integrity System</div>
+  </div>
+  <div class="footer-meta">
+    Page 03 · Simulation · Scripted demo · Zero API cost<br>
+    Designed by an AIGP-certified AI governance practitioner · © 2026
+  </div>
+</footer>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+let scenario = 'audit';
+let simRunning = false;
+let clockInterval = null;
+let startTime = 0;
+let hitlPending = false;
+
+// ── SCENARIO DATA ──────────────────────────────────────────────────
+const EXPLAINERS = {
+  audit: {
+    title: 'Regulator audit request — FCA Section 165',
+    body: 'The FCA has issued a Section 165 information request for the Trade Signal Confidence Scorer. AEGIS receives the request, locates all governance records, assembles the complete Annex IV evidence bundle, and returns a regulator-ready audit package — without a single manual search.',
+    sla: '< 4 min'
+  },
+  highrisk: {
+    title: 'High-risk model intake — Trade Signal Confidence Scorer',
+    body: 'A new ML model is submitted for documentation intake. AEGIS validates all mandatory fields, classifies the model as EU AI Act Annex III High-Risk, determines oversight requirements, explains every decision in plain language, and writes the complete audit record to Firestore.',
+    sla: '< 90s'
+  },
+  blocked: {
+    title: 'Incomplete intake — blocked at the gate',
+    body: 'A documentation submission arrives with three mandatory fields missing. AEGIS blocks the submission at the Intake Agent, generates a field-level rejection with plain-language explanations of what is missing and why each field is required by policy. No downstream agent fires.',
+    sla: '< 5s'
+  },
+  hitl: {
+    title: 'Ambiguous classification — HITL escalation',
+    body: 'An ESG Portfolio Ranker model is submitted. The Classification Agent returns a confidence score of 0.61 — below the autonomous decision threshold of 0.80. AEGIS cannot classify without human input. The Compliance Officer is notified and must confirm or escalate the risk tier before documentation proceeds.',
+    sla: '< 20s + human'
+  }
+};
+
+function updateExplainer() {
+  const e = EXPLAINERS[scenario];
+  document.getElementById('exp-title').textContent = e.title;
+  document.getElementById('exp-body').textContent = e.body;
+  document.getElementById('exp-sla').textContent = e.sla;
+}
+
+// Pill selection
+document.querySelectorAll('#scenario-pills .pill').forEach(p => {
+  p.addEventListener('click', () => {
+    if (simRunning) return;
+    document.querySelectorAll('#scenario-pills .pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    scenario = p.dataset.val;
+    updateExplainer();
+  });
+});
+
+// ── SCENARIO SCRIPTS ───────────────────────────────────────────────
+
+const REASONING = {
+  audit: `<span class="rs-dim">// AEGIS · Audit Agent invoked</span>
+<span class="rs-dim">// Trigger: FCA Section 165 · Ref FS/2026/MCG/0047</span>
+<span class="rs-dim">// Target model: Trade Signal Confidence Scorer v1.0</span>
+
+<span class="rs-teal">→ Querying Firestore · collection: model_registry</span>
+<span class="rs-dim">  filter: model_id = "TSCS-001"</span>
+<span class="rs-green">  ✓ Record found · last updated 2026-05-14</span>
+
+<span class="rs-teal">→ Retrieving intake record</span>
+<span class="rs-dim">  document: intake_submissions/TSCS-001-2026-03-02</span>
+<span class="rs-green">  ✓ All 12 mandatory fields present · Annex IV compliant</span>
+
+<span class="rs-teal">→ Retrieving risk classification</span>
+<span class="rs-dim">  EU AI Act Annex III · criterion: §5(b) creditworthiness</span>
+<span class="rs-bold">  Tier: HIGH-RISK · classified 2026-03-02T09:44:22Z</span>
+<span class="rs-green">  ✓ Classification rationale on record</span>
+
+<span class="rs-teal">→ Retrieving oversight records</span>
+<span class="rs-dim">  SME review: Dr. A. Nkosi · 2026-03-08</span>
+<span class="rs-dim">  Compliance sign-off: C. Whitmore · 2026-03-10</span>
+<span class="rs-green">  ✓ Human oversight chain complete · 2 reviewers on record</span>
+
+<span class="rs-teal">→ Retrieving version history</span>
+<span class="rs-dim">  v1.0 published 2026-03-10 · v0.9 draft · v0.8 draft</span>
+<span class="rs-green">  ✓ Full version lineage retrievable</span>
+
+<span class="rs-teal">→ Assembling Annex IV bundle</span>
+<span class="rs-dim">  Technical description · Risk management system documentation</span>
+<span class="rs-dim">  Training data governance · Human oversight measures</span>
+<span class="rs-dim">  Accuracy metrics · Intended purpose declaration</span>
+<span class="rs-green">  ✓ Annex IV bundle complete · 7 sections · regulator-ready</span>
+
+<span class="rs-violet">→ Explainability Agent wrapping output...</span>
+<span class="rs-teal">→ Writing to Firestore · audit_log/FCA-2026-0047</span>
+<span class="rs-green">  ✓ Audit package persisted · immutable · timestamped</span>`,
+
+  highrisk: `<span class="rs-dim">// AEGIS · Orchestrator Agent · new intake received</span>
+<span class="rs-dim">// Model: Trade Signal Confidence Scorer v2.1</span>
+<span class="rs-dim">// Submitted by: S. Vargas · Documentation Lead</span>
+
+<span class="rs-teal">→ Intake Agent · validating mandatory fields</span>
+<span class="rs-dim">  Checking 12 required fields against DOC-GOV-001 §5</span>
+<span class="rs-green">  ✓ All fields present and non-empty</span>
+<span class="rs-green">  ✓ Data classification check passed · no restricted params</span>
+
+<span class="rs-teal">→ Policy Context Loader · fetching from Cloud Storage</span>
+<span class="rs-dim">  Loading: AI_Content_Working_Standard_v0_1.docx</span>
+<span class="rs-dim">  Loading: Human_Oversight_Standard_v0_1.docx</span>
+<span class="rs-dim">  Loading: Model_Documentation_Minimum_Standards_v0_1.docx</span>
+<span class="rs-green">  ✓ 3 policies loaded · injected into agent context</span>
+
+<span class="rs-teal">→ Classification Agent · Gemini 2.0 Flash</span>
+<span class="rs-dim">  Evaluating against EU AI Act Annex III criteria...</span>
+<span class="rs-dim">  §5(b): AI systems used to evaluate creditworthiness</span>
+<span class="rs-dim">  §5(b): influences access to financial services</span>
+<span class="rs-amber">  Confidence: 0.94 · above autonomous threshold (0.80)</span>
+<span class="rs-bold">  → Classification: HIGH-RISK · Annex III §5(b)</span>
+
+<span class="rs-teal">→ Oversight Agent · determining review requirements</span>
+<span class="rs-dim">  High-risk classification triggers Tier 2 oversight</span>
+<span class="rs-dim">  Required: qualified SME with direct model knowledge</span>
+<span class="rs-dim">  Required: Compliance Officer sign-off before publication</span>
+<span class="rs-dim">  Required: Model Risk Owner notification</span>
+
+<span class="rs-violet">→ Explainability Agent · generating plain-language output</span>
+<span class="rs-teal">→ Audit Agent · writing intake record to Firestore</span>
+<span class="rs-green">  ✓ Record persisted · model_registry/TSCS-002</span>
+<span class="rs-green">  ✓ Oversight workflow initiated · notifications sent</span>`,
+
+  blocked: `<span class="rs-dim">// AEGIS · Orchestrator Agent · intake received</span>
+<span class="rs-dim">// Model: Portfolio Allocation Optimiser v3.0</span>
+<span class="rs-dim">// Submitted by: J. Mensah · Writer</span>
+
+<span class="rs-teal">→ Intake Agent · validating mandatory fields</span>
+<span class="rs-dim">  Checking 12 required fields against DOC-GOV-001 §5</span>
+
+<span class="rs-red">  ✗ FIELD MISSING: model_owner</span>
+<span class="rs-dim">    Required by DOC-GOV-001 §5.1 · accountable human owner</span>
+<span class="rs-dim">    Cannot proceed without named model owner</span>
+
+<span class="rs-red">  ✗ FIELD MISSING: known_limitations</span>
+<span class="rs-dim">    Required by DOC-GOV-001 §5.4 · SR 11-7 §IV mandatory</span>
+<span class="rs-dim">    All models must document known failure modes</span>
+
+<span class="rs-red">  ✗ FIELD MISSING: human_oversight_requirement</span>
+<span class="rs-dim">    Required by Human Oversight Standard §3</span>
+<span class="rs-dim">    EU AI Act Article 14 — oversight measures mandatory</span>
+
+<span class="rs-bold">→ SUBMISSION BLOCKED · 3 mandatory fields missing</span>
+<span class="rs-dim">  No downstream agent invoked</span>
+<span class="rs-dim">  No model record created in Firestore</span>
+<span class="rs-dim">  Documentation cannot proceed until all fields supplied</span>
+
+<span class="rs-violet">→ Explainability Agent · generating rejection notice</span>
+<span class="rs-amber">  Rejection record written to audit_log · ref: BLOCK-2026-0312</span>
+<span class="rs-amber">  Writer notified · field-level guidance provided</span>`,
+
+  hitl: `<span class="rs-dim">// AEGIS · Orchestrator Agent · intake received</span>
+<span class="rs-dim">// Model: ESG Portfolio Ranker v1.0</span>
+<span class="rs-dim">// Submitted by: S. Vargas · Documentation Lead</span>
+
+<span class="rs-teal">→ Intake Agent · validating mandatory fields</span>
+<span class="rs-green">  ✓ All 12 mandatory fields present</span>
+
+<span class="rs-teal">→ Policy Context Loader · 3 policies injected</span>
+<span class="rs-green">  ✓ Context loaded · Gemini ready</span>
+
+<span class="rs-teal">→ Classification Agent · Gemini 2.0 Flash</span>
+<span class="rs-dim">  Evaluating against EU AI Act Annex III criteria...</span>
+<span class="rs-dim">  §5(b): creditworthiness assessment · partial match</span>
+<span class="rs-dim">  §6: biometric categorisation · not applicable</span>
+<span class="rs-dim">  §4: employment decisions · not applicable</span>
+<span class="rs-dim">  §5(b) deployer context: institutional portfolios only</span>
+<span class="rs-dim">  Deployer context is ambiguous — retail exposure unclear</span>
+<span class="rs-amber">  Confidence: 0.61 · BELOW autonomous threshold (0.80)</span>
+
+<span class="rs-bold">→ AUTONOMOUS CLASSIFICATION NOT POSSIBLE</span>
+<span class="rs-dim">  System cannot assign risk tier with confidence &lt; 0.80</span>
+<span class="rs-dim">  IAPP AIGP principle: human accountability required</span>
+<span class="rs-dim">  EU AI Act Article 14: human oversight for borderline cases</span>
+
+<span class="rs-amber">→ HITL ESCALATION TRIGGERED</span>
+<span class="rs-dim">  Notifying: Compliance Officer · C. Whitmore</span>
+<span class="rs-dim">  Notifying: Documentation Lead · S. Vargas</span>
+<span class="rs-violet">→ Explainability Agent · generating HITL briefing</span>
+<span class="rs-amber">  Awaiting human decision before documentation proceeds...</span>`
+};
+
+const EXPLAIN_TEXT = {
+  audit: {
+    mid: 'Locating governance records across Firestore collections. Retrieving intake record, risk classification, oversight log, and version history for the Trade Signal Confidence Scorer.',
+    done: 'The audit package was assembled because a complete governance record existed in Firestore for this model. Every required element — intake, classification, oversight, version history — was captured at the time of the original governance events, not reconstructed retrospectively. This is what makes the evidence chain credible to a regulator: it existed before the request, not because of it. The FCA Section 165 notice can now be answered in full within the 10-day deadline.'
+  },
+  highrisk: {
+    mid: 'Classification Agent is reasoning against EU AI Act Annex III criteria. Model involves financial decision-making — evaluating Annex III §5(b) criterion for creditworthiness and access to financial services.',
+    done: 'This model was classified as High-Risk under EU AI Act Annex III §5(b) because it produces confidence scores that influence trading decisions, which constitute access to financial resources. The classification was made with 94% confidence — above the 80% autonomous decision threshold. Because it is High-Risk, Tier 2 oversight applies: a qualified SME with direct model knowledge must review the documentation, and a Compliance Officer must sign off before publication. These requirements are not discretionary — they follow directly from the risk tier assignment.'
+  },
+  blocked: {
+    mid: 'Intake Agent is checking all 12 mandatory fields against the Model Documentation Minimum Standards Policy §5.',
+    done: 'This submission was blocked because three mandatory fields were missing: model_owner, known_limitations, and human_oversight_requirement. These fields are not optional. The model_owner field is required because every AI artifact must have a named, accountable human — this is the IAPP AIGP human accountability principle. The known_limitations field is required by both the Model Documentation Minimum Standards Policy and SR 11-7 §IV. The human_oversight_requirement field is required by the Human Oversight Documentation Standard and EU AI Act Article 14. No downstream agent was invoked. The submission must be completed before documentation can proceed.'
+  },
+  hitl: {
+    mid: 'Classification Agent returned a confidence score of 0.61 — below the autonomous decision threshold. Human decision required before documentation can proceed.',
+    done: 'AEGIS escalated this classification to a human decision-maker because the Classification Agent could not assign a risk tier with sufficient confidence. A confidence score of 0.61 means the model partially matches EU AI Act Annex III §5(b) criteria, but the deployer context — specifically whether institutional-only exposure excludes retail consumers — is ambiguous. The system cannot resolve this ambiguity autonomously. The IAPP AIGP human accountability principle requires that borderline cases are decided by a qualified human, not by a model operating beyond its confidence boundary. The Compliance Officer must confirm or escalate the risk tier before documentation proceeds.'
+  }
+};
+
+const TERMINAL_SCRIPTS = {
+  audit: [
+    ['dim','# AEGIS Audit Agent invoked'],
+    ['dim','# FCA Section 165 · Ref: FS/2026/MCG/0047'],
+    ['field','model_id'],['val','= "TSCS-001"'],
+    ['field','request_type'],['val','= "section_165"'],
+    ['prompt','aegis@mcg','→ querying model_registry...'],
+    ['ok','✓ record found · Trade Signal Confidence Scorer v1.0'],
+    ['prompt','aegis@mcg','→ retrieving intake record...'],
+    ['ok','✓ intake_submissions/TSCS-001-2026-03-02'],
+    ['ok','✓ 12/12 mandatory fields present · Annex IV compliant'],
+    ['prompt','aegis@mcg','→ retrieving risk classification...'],
+    ['ok','✓ HIGH-RISK · Annex III §5(b) · conf: 0.94'],
+    ['prompt','aegis@mcg','→ retrieving oversight records...'],
+    ['ok','✓ SME: Dr. A. Nkosi · 2026-03-08'],
+    ['ok','✓ Compliance: C. Whitmore · 2026-03-10'],
+    ['prompt','aegis@mcg','→ assembling Annex IV bundle...'],
+    ['ok','✓ 7 sections complete · regulator-ready'],
+    ['prompt','aegis@mcg','→ writing to firestore · audit_log...'],
+    ['ok','✓ package persisted · ref: FCA-2026-0047'],
+  ],
+  highrisk: [
+    ['dim','# AEGIS Intake Agent invoked'],
+    ['dim','# Model: Trade Signal Confidence Scorer v2.1'],
+    ['field','model_name'],['val','= "Trade Signal Confidence Scorer"'],
+    ['field','model_version'],['val','= "2.1"'],
+    ['field','model_owner'],['val','= "Dr. A. Nkosi"'],
+    ['field','intended_use'],['val','= "Equity trading signal confidence"'],
+    ['field','data_inputs'],['val','= "Market data · order book · news NLP"'],
+    ['field','known_limitations'],['val','= "Degrades in low-liquidity regimes"'],
+    ['field','risk_classification'],['val','= "PENDING"'],
+    ['field','human_oversight'],['val','= "Required · Tier 2"'],
+    ['prompt','aegis@mcg','→ all 12 fields validated'],
+    ['ok','✓ intake record accepted · forwarding to Classification Agent'],
+    ['prompt','aegis@mcg','→ EU AI Act Annex III evaluation...'],
+    ['ok','✓ HIGH-RISK · §5(b) · conf: 0.94'],
+    ['ok','✓ oversight requirements set · Tier 2 SME + Compliance'],
+    ['ok','✓ audit record written · model_registry/TSCS-002'],
+  ],
+  blocked: [
+    ['dim','# AEGIS Intake Agent invoked'],
+    ['dim','# Model: Portfolio Allocation Optimiser v3.0'],
+    ['field','model_name'],['val','= "Portfolio Allocation Optimiser"'],
+    ['field','model_version'],['val','= "3.0"'],
+    ['err','✗ model_owner = MISSING'],
+    ['dim','  required: DOC-GOV-001 §5.1'],
+    ['field','intended_use'],['val','= "Multi-asset allocation optimisation"'],
+    ['field','data_inputs'],['val','= "Portfolio weights · risk metrics"'],
+    ['err','✗ known_limitations = MISSING'],
+    ['dim','  required: DOC-GOV-001 §5.4 · SR 11-7 §IV'],
+    ['err','✗ human_oversight_requirement = MISSING'],
+    ['dim','  required: Human Oversight Standard §3'],
+    ['prompt','aegis@mcg','→ SUBMISSION BLOCKED'],
+    ['warn','  3 mandatory fields missing'],
+    ['warn','  no downstream agents invoked'],
+    ['warn','  rejection logged · ref: BLOCK-2026-0312'],
+  ],
+  hitl: [
+    ['dim','# AEGIS Classification Agent invoked'],
+    ['dim','# Model: ESG Portfolio Ranker v1.0'],
+    ['field','model_name'],['val','= "ESG Portfolio Ranker"'],
+    ['prompt','aegis@mcg','→ all 12 fields validated ✓'],
+    ['prompt','aegis@mcg','→ loading policy context...'],
+    ['ok','✓ 3 policies loaded · injected'],
+    ['prompt','aegis@mcg','→ Annex III evaluation · Gemini 2.0 Flash...'],
+    ['dim','  §5(b) creditworthiness: partial match'],
+    ['dim','  deployer context: ambiguous (retail unclear)'],
+    ['warn','  confidence: 0.61 · threshold: 0.80'],
+    ['warn','  AUTONOMOUS DECISION NOT POSSIBLE'],
+    ['prompt','aegis@mcg','→ HITL escalation triggered'],
+    ['warn','  notifying: C. Whitmore · Compliance Officer'],
+    ['warn','  awaiting human decision...'],
+  ]
+};
+
+// ── HELPERS ────────────────────────────────────────────────────────
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function addTermLine(type, ...parts) {
+  const tb = document.getElementById('terminal-body');
+  const d = document.createElement('div');
+  d.className = 'term-line';
+  if (type === 'prompt') {
+    d.innerHTML = `<span class="term-prompt">${parts[0]}@mcg</span> <span class="term-val">${parts[1]}</span>`;
+  } else if (type === 'field') {
+    d.innerHTML = `  <span class="term-field">${parts[0]}</span>${parts[1] ? '<span class="term-key">'+parts[1]+'</span>' : ''}`;
+  } else if (type === 'val') {
+    d.innerHTML = `<span class="term-val">${parts[0]}</span>`;
+  } else if (type === 'ok') {
+    d.innerHTML = `  <span class="term-ok">${parts[0]}</span>`;
+  } else if (type === 'warn') {
+    d.innerHTML = `  <span class="term-warn">${parts[0]}</span>`;
+  } else if (type === 'err') {
+    d.innerHTML = `  <span class="term-err">${parts[0]}</span>`;
+  } else if (type === 'dim') {
+    d.innerHTML = `<span class="term-comment">${parts[0]}</span>`;
+  }
+  tb.appendChild(d);
+  tb.scrollTop = tb.scrollHeight;
+}
+
+function clearTerminal() {
+  const tb = document.getElementById('terminal-body');
+  tb.innerHTML = '';
+}
+
+function nodeActive(id, sla) {
+  const n = document.getElementById(id);
+  n.className = 'pipe-node active';
+  n.querySelector('.pipe-sla').textContent = sla;
+}
+function nodeDone(id, sla, cls = 'done') {
+  const n = document.getElementById(id);
+  n.className = 'pipe-node ' + cls;
+  n.querySelector('.pipe-sla').textContent = sla;
+}
+function resetNodes() {
+  document.querySelectorAll('.pipe-node').forEach(n => {
+    n.className = 'pipe-node';
+    n.querySelector('.pipe-sla').textContent = '—';
+  });
+}
+
+function setStatus(s) {
+  const el = document.getElementById('sys-status');
+  el.className = 'sys-status ' + s;
+  el.textContent = s.toUpperCase();
+}
+
+function streamReasoning(html, delay = 0) {
+  setTimeout(() => {
+    const r = document.getElementById('reasoning');
+    r.innerHTML = '';
+    const el = document.createElement('div');
+    r.appendChild(el);
+    const lines = html.split('\n');
+    let i = 0;
+    function nextLine() {
+      if (i >= lines.length) return;
+      el.innerHTML += (i > 0 ? '\n' : '') + lines[i];
+      r.scrollTop = r.scrollHeight;
+      i++;
+      setTimeout(nextLine, 55);
+    }
+    nextLine();
+  }, delay);
+}
+
+function setExplain(text) {
+  document.getElementById('explain-text').textContent = text;
+}
+
+function startClock() {
+  startTime = Date.now();
+  clockInterval = setInterval(() => {
+    const el = document.getElementById('sys-clock');
+    if (el) el.textContent = ((Date.now() - startTime) / 1000).toFixed(2) + 's';
+  }, 50);
+}
+function stopClock() {
+  clearInterval(clockInterval);
+}
+
+function showAuditPkg(items, time, title) {
+  const el = document.getElementById('audit-pkg');
+  el.classList.add('visible');
+  document.getElementById('audit-pkg-title').textContent = title;
+  const ai = document.getElementById('audit-items');
+  ai.innerHTML = '';
+  items.forEach(item => {
+    const d = document.createElement('div');
+    d.className = 'audit-item';
+    d.innerHTML = `<span class="audit-check">✓</span><span>${item}</span>`;
+    ai.appendChild(d);
+  });
+  document.getElementById('audit-time').textContent = time;
+}
+
+function hideAll() {
+  document.getElementById('reg-notice').classList.remove('visible');
+  document.getElementById('hitl-card').classList.remove('visible');
+  document.getElementById('audit-pkg').classList.remove('visible');
+}
+
+async function runTerminalScript(lines, delay = 60) {
+  for (const line of lines) {
+    await wait(delay);
+    addTermLine(...line);
+  }
+}
+
+// ── MAIN SIMULATION ────────────────────────────────────────────────
+async function runSimulation() {
+  if (simRunning) return;
+  simRunning = true;
+  hitlPending = false;
+
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('idle-overlay').classList.add('hidden');
+
+  // Reset
+  clearTerminal();
+  resetNodes();
+  hideAll();
+  document.getElementById('reasoning').innerHTML = '';
+  setExplain('Awaiting agent decision...');
+  setStatus('running');
+  stopClock();
+  startClock();
+
+  if (scenario === 'audit') await runAudit();
+  else if (scenario === 'highrisk') await runHighRisk();
+  else if (scenario === 'blocked') await runBlocked();
+  else if (scenario === 'hitl') await runHITL();
+
+  simRunning = false;
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = '↺ Run again';
+}
+
+async function runAudit() {
+  // Show regulator notice
+  document.getElementById('reg-notice').classList.add('visible');
+  document.getElementById('reg-countdown').textContent = 'Day 0 · 09:14 · 10 days to respond';
+
+  await wait(800);
+  setExplain(EXPLAIN_TEXT.audit.mid);
+
+  // Intake / lookup
+  nodeActive('node-intake', 'querying...');
+  streamReasoning(REASONING.audit, 200);
+  await runTerminalScript(TERMINAL_SCRIPTS.audit.slice(0,6), 90);
+  await wait(400);
+  nodeDone('node-intake', '0.8s ✓');
+
+  // Policy
+  nodeActive('node-policy', 'loading...');
+  await wait(700);
+  nodeDone('node-policy', '0.6s ✓');
+
+  // Classify
+  nodeActive('node-classify', 'retrieving...');
+  await runTerminalScript(TERMINAL_SCRIPTS.audit.slice(6,12), 80);
+  await wait(600);
+  nodeDone('node-classify', '0.5s ✓');
+
+  // Oversight
+  nodeActive('node-oversight', 'verifying...');
+  await wait(700);
+  nodeDone('node-oversight', '0.6s ✓');
+
+  // Gemini
+  nodeActive('node-gemini', 'assembling...');
+  await wait(900);
+  nodeDone('node-gemini', '0.9s ✓');
+
+  // Explain
+  nodeActive('node-explain', 'generating...');
+  await wait(600);
+  nodeDone('node-explain', '0.5s ✓');
+  setExplain(EXPLAIN_TEXT.audit.done);
+
+  // Audit
+  nodeActive('node-audit', 'bundling...');
+  await runTerminalScript(TERMINAL_SCRIPTS.audit.slice(12), 80);
+  await wait(700);
+  nodeDone('node-audit', '0.7s ✓');
+
+  // Firestore
+  nodeActive('node-firestore', 'writing...');
+  await wait(500);
+  nodeDone('node-firestore', '0.4s ✓');
+
+  stopClock();
+  setStatus('done');
+
+  showAuditPkg([
+    'Intake record · TSCS-001-2026-03-02 · all 12 Annex IV fields',
+    'Risk classification · HIGH-RISK · Annex III §5(b) · conf: 0.94',
+    'Human oversight log · SME + Compliance Officer · 2 reviewers',
+    'Version history · v1.0 published · v0.9 / v0.8 drafts retained',
+    'Policy citations · DOC-GOV-001 · Human Oversight Standard',
+    'Explainability record · plain-language rationale · every decision',
+    'Firestore ref · FCA-2026-0047 · immutable · timestamped'
+  ], '3m 47s · vs 6–14 days manual', 'FCA Section 165 · Ref FS/2026/MCG/0047 · evidence bundle complete');
+}
+
+async function runHighRisk() {
+  await wait(400);
+  setExplain(EXPLAIN_TEXT.highrisk.mid);
+
+  nodeActive('node-intake', 'validating...');
+  streamReasoning(REASONING.highrisk, 200);
+  await runTerminalScript(TERMINAL_SCRIPTS.highrisk.slice(0,10), 75);
+  await wait(500);
+  nodeDone('node-intake', '1.1s ✓');
+
+  nodeActive('node-policy', 'loading...');
+  await wait(700);
+  nodeDone('node-policy', '0.6s ✓');
+
+  nodeActive('node-classify', 'classifying...');
+  await runTerminalScript(TERMINAL_SCRIPTS.highrisk.slice(10,14), 80);
+  await wait(900);
+  nodeDone('node-classify', '1.4s ✓');
+
+  nodeActive('node-oversight', 'determining...');
+  await wait(700);
+  nodeDone('node-oversight', '0.6s ✓');
+
+  nodeActive('node-gemini', 'reasoning...');
+  await wait(800);
+  nodeDone('node-gemini', '0.8s ✓');
+
+  nodeActive('node-explain', 'generating...');
+  await wait(500);
+  nodeDone('node-explain', '0.5s ✓');
+  setExplain(EXPLAIN_TEXT.highrisk.done);
+
+  nodeActive('node-audit', 'recording...');
+  await runTerminalScript(TERMINAL_SCRIPTS.highrisk.slice(14), 80);
+  await wait(600);
+  nodeDone('node-audit', '0.6s ✓');
+
+  nodeActive('node-firestore', 'persisting...');
+  await wait(400);
+  nodeDone('node-firestore', '0.4s ✓');
+
+  stopClock();
+  setStatus('done');
+
+  showAuditPkg([
+    'Intake record · TSCS-002 · 12/12 mandatory fields · validated',
+    'EU AI Act classification · HIGH-RISK · Annex III §5(b) · conf: 0.94',
+    'Oversight requirements · Tier 2 · SME + Compliance Officer required',
+    'Explainability record · classification rationale · plain language',
+    'Model registry · model_registry/TSCS-002 · created',
+    'Oversight workflow initiated · notifications sent to reviewers'
+  ], '67s', 'New model intake complete · Trade Signal Confidence Scorer v2.1');
+}
+
+async function runBlocked() {
+  await wait(300);
+  setExplain(EXPLAIN_TEXT.blocked.mid);
+
+  nodeActive('node-intake', 'validating...');
+  streamReasoning(REASONING.blocked, 150);
+  await runTerminalScript(TERMINAL_SCRIPTS.blocked, 70);
+  await wait(400);
+  nodeDone('node-intake', '1.2s ✗', 'error');
+
+  // All downstream stay idle — visually powerful
+  await wait(300);
+  nodeActive('node-explain', 'generating rejection...');
+  setExplain(EXPLAIN_TEXT.blocked.done);
+  await wait(700);
+  nodeDone('node-explain', '0.5s ✓');
+
+  nodeActive('node-firestore', 'logging rejection...');
+  await wait(400);
+  nodeDone('node-firestore', '0.3s ✓');
+
+  stopClock();
+  setStatus('blocked');
+}
+
+async function runHITL() {
+  await wait(400);
+  setExplain(EXPLAIN_TEXT.hitl.mid);
+
+  nodeActive('node-intake', 'validating...');
+  streamReasoning(REASONING.hitl, 200);
+  await runTerminalScript(TERMINAL_SCRIPTS.hitl.slice(0,5), 80);
+  await wait(500);
+  nodeDone('node-intake', '1.0s ✓');
+
+  nodeActive('node-policy', 'loading...');
+  await wait(700);
+  nodeDone('node-policy', '0.6s ✓');
+
+  nodeActive('node-classify', 'classifying...');
+  await runTerminalScript(TERMINAL_SCRIPTS.hitl.slice(5), 80);
+  await wait(1000);
+  nodeDone('node-classify', '0.61 conf ↑', 'warn');
+
+  nodeActive('node-explain', 'generating HITL brief...');
+  await wait(600);
+  nodeDone('node-explain', '0.5s ✓');
+  setExplain(EXPLAIN_TEXT.hitl.done);
+
+  nodeActive('node-firestore', 'logging escalation...');
+  await wait(400);
+  nodeDone('node-firestore', '0.4s ✓');
+
+  stopClock();
+  setStatus('escalated');
+  hitlPending = true;
+  document.getElementById('hitl-card').classList.add('visible');
+}
+
+async function hitlResolve(decision) {
+  if (!hitlPending) return;
+  hitlPending = false;
+  document.getElementById('hitl-card').classList.remove('visible');
+  startClock();
+  setStatus('running');
+
+  const r = document.getElementById('reasoning');
+  const p = document.createElement('div');
+  if (decision === 'approve') {
+    p.innerHTML = `\n<span class="rs-green">✓ Compliance Officer decision: CONFIRM HIGH-RISK</span>\n<span class="rs-dim">Reviewer: C. Whitmore · ${new Date().toISOString()}</span>\n<span class="rs-teal">→ Classification locked · proceeding to documentation</span>`;
+    setExplain('The Compliance Officer confirmed the High-Risk classification. With human input, the system now has the decision authority it lacked autonomously. The classification is locked to the reviewer\'s identity and timestamp. Documentation can proceed under Tier 2 oversight requirements: qualified SME review and Compliance Officer sign-off before publication. The HITL event itself is recorded as a governance artifact — the escalation, the decision, the reviewer, and the outcome are all part of the audit trail.');
+  } else {
+    p.innerHTML = `\n<span class="rs-amber">↑ Escalated to Risk Committee · C. Whitmore</span>\n<span class="rs-dim">Documentation paused pending Risk Committee review</span>\n<span class="rs-dim">Escalation logged · ref: HITL-ESCL-2026-0089</span>`;
+    setExplain('The Compliance Officer escalated this classification to the Risk Committee. This is the correct governance response when neither autonomous classification nor a first-line human decision is sufficient. The escalation itself is a governance event — it demonstrates that the oversight mechanism is functioning as designed. Documentation is paused until the Risk Committee returns a determination. The entire chain — submission, ambiguous classification, HITL notification, escalation decision — is recorded in Firestore as an immutable audit trail.');
+  }
+  r.appendChild(p);
+  r.scrollTop = r.scrollHeight;
+
+  nodeActive('node-oversight', 'recording decision...');
+  await wait(600);
+  nodeDone('node-oversight', decision === 'approve' ? '✓ confirmed' : '↑ escalated', decision === 'approve' ? 'done' : 'warn');
+
+  nodeActive('node-audit', 'recording HITL event...');
+  await wait(500);
+  nodeDone('node-audit', '0.5s ✓');
+
+  nodeActive('node-firestore', 'persisting...');
+  await wait(400);
+  nodeDone('node-firestore', '0.4s ✓');
+
+  stopClock();
+  setStatus(decision === 'approve' ? 'done' : 'escalated');
+
+  simRunning = false;
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = '↺ Run again';
+}
+
+// Nav active state
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.href === window.location.href) a.classList.add('active');
+});
+</script>
+
+</body>
+</html>
